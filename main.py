@@ -233,6 +233,15 @@ HTML = r'''<!doctype html>
           <div class="control"><label for="target-height">注视高度</label><input id="target-height" type="range" min="0.15" max="0.9" step="0.01" value="0.54"><span class="value" data-for="target-height">54%</span></div>
         </section>
         <section class="section">
+          <div class="section-head"><h2>构图预设与书签</h2><span class="readout" id="camera-preset-status">自由机位</span></div>
+          <select id="camera-preset" class="select" aria-label="镜头构图预设">
+            <option value="full">正面全身</option><option value="bust">正面半身</option><option value="portrait">面部特写</option><option value="three-quarter">三分之四视角</option><option value="profile">侧面视角</option><option value="low-angle">低机位全身</option>
+          </select>
+          <button id="apply-camera-preset" class="command" style="width:100%;margin-top:8px"><i data-lucide="scan"></i>应用构图</button>
+          <select id="camera-bookmark" class="select" aria-label="镜头书签" style="margin-top:8px"><option value="1">机位书签 1</option><option value="2">机位书签 2</option><option value="3">机位书签 3</option><option value="4">机位书签 4</option></select>
+          <div class="button-row" style="margin-top:8px"><button id="save-camera-bookmark" class="command"><i data-lucide="save"></i>保存</button><button id="load-camera-bookmark" class="command"><i data-lucide="folder-open"></i>载入</button></div>
+        </section>
+        <section class="section">
           <div class="button-row three">
             <button id="reset-camera" class="command primary"><i data-lucide="rotate-ccw"></i>复位</button>
             <button id="screenshot" class="command"><i data-lucide="camera"></i>截图</button>
@@ -283,6 +292,9 @@ HTML = r'''<!doctype html>
           </select></div>
           <div class="switch-row"><span>显示 HDR 全景背景</span><label class="switch"><input id="hdr-environment" type="checkbox"><span></span></label></div>
           <div class="control"><label for="environment-intensity">环境强度</label><input id="environment-intensity" type="range" min="0" max="2" step="0.05" value="0.7"><span class="value" data-for="environment-intensity">0.70</span></div>
+          <div class="control"><label for="hdr-rotation">全景方向</label><input id="hdr-rotation" type="range" min="-180" max="180" step="1" value="0"><span class="value" data-for="hdr-rotation">0°</span></div>
+          <div class="control"><label for="background-intensity">背景亮度</label><input id="background-intensity" type="range" min="0" max="2" step="0.05" value="0.7"><span class="value" data-for="background-intensity">0.70</span></div>
+          <div class="control"><label for="background-blur">背景模糊</label><input id="background-blur" type="range" min="0" max="1" step="0.01" value="0"><span class="value" data-for="background-blur">0%</span></div>
           <div class="switch-row"><span>泛光</span><label class="switch"><input id="bloom-enabled" type="checkbox"><span></span></label></div>
           <div class="control"><label for="bloom-strength">泛光强度</label><input id="bloom-strength" type="range" min="0" max="2" step="0.05" value="0.35"><span class="value" data-for="bloom-strength">0.35</span></div>
           <div class="switch-row"><span>景深</span><label class="switch"><input id="dof-enabled" type="checkbox"><span></span></label></div>
@@ -325,6 +337,13 @@ HTML = r'''<!doctype html>
           <div class="switch-row"><span>实时对称编辑</span><label class="switch"><input id="live-mirror" type="checkbox"><span></span></label></div>
         </section>
         <section class="section">
+          <div class="section-head"><h2>手势与姿势模板</h2><span class="readout" id="pose-preset-status">待选择</span></div>
+          <select id="hand-preset-side" class="select" aria-label="手势应用范围"><option value="both">双手</option><option value="left">左手</option><option value="right">右手</option></select>
+          <div class="preset-grid" style="margin-top:8px"><button class="command hand-preset" data-hand="open">张开</button><button class="command hand-preset" data-hand="relaxed">放松</button><button class="command hand-preset" data-hand="fist">握拳</button><button class="command hand-preset" data-hand="point">指向</button><button class="command hand-preset" data-hand="peace">剪刀手</button></div>
+          <select id="body-preset" class="select" aria-label="全身姿势模板" style="margin-top:8px"><option value="neutral">基础姿态</option><option value="arms-down">自然垂臂</option><option value="relaxed">轻松站姿</option><option value="wave-left">左手挥手</option><option value="wave-right">右手挥手</option><option value="contrapposto">重心站姿</option></select>
+          <button id="apply-body-preset" class="command" style="width:100%;margin-top:8px"><i data-lucide="person-standing"></i>应用全身模板</button>
+        </section>
+        <section class="section">
           <div class="section-head"><h2>旋转偏移</h2><span class="readout">XYZ</span></div>
           <div class="control axis-x"><label for="pose-rot-x">X</label><input id="pose-rot-x" type="range" min="-180" max="180" step="1" value="0"><span class="value" data-for="pose-rot-x">0°</span></div>
           <div class="control axis-y"><label for="pose-rot-y">Y</label><input id="pose-rot-y" type="range" min="-180" max="180" step="1" value="0"><span class="value" data-for="pose-rot-y">0°</span></div>
@@ -341,6 +360,8 @@ HTML = r'''<!doctype html>
           <div class="button-row"><button id="undo-pose" class="command" disabled><i data-lucide="undo-2"></i>撤销</button><button id="redo-pose" class="command" disabled><i data-lucide="redo-2"></i>重做</button></div>
           <div class="button-row" style="margin-top:8px"><button id="export-pose" class="command"><i data-lucide="download"></i>导出姿势</button><button id="import-pose" class="command"><i data-lucide="upload"></i>导入姿势</button></div>
           <input id="pose-file" class="file-input" type="file" accept="application/json,.json">
+          <button id="load-vpd" class="command" style="width:100%;margin-top:8px"><i data-lucide="file-up"></i>导入 VPD 姿势</button>
+          <input id="vpd-file" class="file-input" type="file" accept=".vpd,application/octet-stream">
           <select id="pose-slot" class="select" aria-label="姿势槽位" style="margin-top:8px"><option value="1">姿势槽位 1</option><option value="2">姿势槽位 2</option><option value="3">姿势槽位 3</option><option value="4">姿势槽位 4</option></select>
           <div class="button-row" style="margin-top:8px"><button id="save-slot" class="command"><i data-lucide="save"></i>保存槽位</button><button id="load-slot" class="command"><i data-lucide="folder-open"></i>载入槽位</button></div>
         </section>
@@ -354,6 +375,23 @@ HTML = r'''<!doctype html>
 
       <div class="panel" id="model-panel">
         <section class="section">
+          <div class="section-head"><h2>模型与附加项</h2><span class="readout" id="model-library-status">主模型</span></div>
+          <select id="model-select" class="select" aria-label="服务端模型"><option value="">正在读取模型目录</option></select>
+          <div class="button-row" style="margin-top:8px"><button id="switch-model" class="command primary"><i data-lucide="refresh-cw"></i>切换主模型</button><button id="add-server-accessory" class="command"><i data-lucide="plus"></i>添加附加项</button></div>
+          <button id="add-local-accessory" class="command" style="width:100%;margin-top:8px"><i data-lucide="folder-open"></i>选择本地模型目录</button>
+          <input id="local-accessory-files" class="file-input" type="file" webkitdirectory directory multiple>
+          <select id="accessory-select" class="select" aria-label="附加模型" style="margin-top:8px"><option value="">暂无附加项</option></select>
+          <button id="remove-accessory" class="command" style="width:100%;margin-top:8px" disabled><i data-lucide="trash-2"></i>移除当前附加项</button>
+        </section>
+        <section class="section">
+          <div class="section-head"><h2>附加项变换</h2><span class="readout" id="accessory-status">未选择</span></div>
+          <div class="control"><label for="accessory-x">水平 X</label><input id="accessory-x" type="range" min="-30" max="30" step="0.05" value="0" disabled><span class="value" data-for="accessory-x">0.00</span></div>
+          <div class="control"><label for="accessory-y">高度 Y</label><input id="accessory-y" type="range" min="-10" max="30" step="0.05" value="0" disabled><span class="value" data-for="accessory-y">0.00</span></div>
+          <div class="control"><label for="accessory-z">纵深 Z</label><input id="accessory-z" type="range" min="-30" max="30" step="0.05" value="0" disabled><span class="value" data-for="accessory-z">0.00</span></div>
+          <div class="control"><label for="accessory-yaw">朝向</label><input id="accessory-yaw" type="range" min="-180" max="180" step="1" value="0" disabled><span class="value" data-for="accessory-yaw">0°</span></div>
+          <div class="control"><label for="accessory-scale">缩放</label><input id="accessory-scale" type="range" min="0.1" max="3" step="0.01" value="1" disabled><span class="value" data-for="accessory-scale">1.00×</span></div>
+        </section>
+        <section class="section">
           <div class="section-head"><h2>变换</h2><span class="readout" id="model-size">--</span></div>
           <div class="control"><label for="model-yaw">朝向</label><input id="model-yaw" type="range" min="-180" max="180" step="1" value="0"><span class="value" data-for="model-yaw">0°</span></div>
           <div class="control"><label for="model-scale">缩放</label><input id="model-scale" type="range" min="0.5" max="1.5" step="0.01" value="1"><span class="value" data-for="model-scale">1.00×</span></div>
@@ -361,14 +399,29 @@ HTML = r'''<!doctype html>
           <div class="control"><label for="rotate-speed">旋转速度</label><input id="rotate-speed" type="range" min="0.1" max="2" step="0.1" value="0.5"><span class="value" data-for="rotate-speed">0.5×</span></div>
         </section>
         <section class="section">
-          <div class="section-head"><h2>VMD 动作</h2><span class="readout" id="animation-status">未载入</span></div>
-          <button id="load-vmd" class="command" style="width:100%"><i data-lucide="file-up"></i>选择 VMD 动作</button>
-          <input id="vmd-file" class="file-input" type="file" accept=".vmd,application/octet-stream">
+          <div class="section-head"><h2>VMD 动作库</h2><span class="readout" id="animation-status">未载入</span></div>
+          <button id="load-vmd" class="command" style="width:100%"><i data-lucide="file-up"></i>添加人物 VMD</button>
+          <input id="vmd-file" class="file-input" type="file" accept=".vmd,application/octet-stream" multiple>
+          <select id="motion-select" class="select" aria-label="人物 VMD 动作" style="margin-top:8px"><option value="">尚未添加动作</option></select>
           <input id="animation-time" class="timeline" type="range" min="0" max="1" step="0.001" value="0" disabled>
           <div class="status-line"><span id="animation-time-label">00:00.000 / 00:00.000</span><span id="animation-file">--</span></div>
           <div class="button-row three"><button id="animation-play" class="command" disabled><i data-lucide="play"></i>播放</button><button id="animation-stop" class="command" disabled><i data-lucide="square"></i>停止</button><button id="animation-remove" class="command" disabled><i data-lucide="x"></i>移除</button></div>
           <div class="control" style="margin-top:10px"><label for="animation-speed">播放速度</label><input id="animation-speed" type="range" min="0.1" max="2" step="0.05" value="1"><span class="value" data-for="animation-speed">1.00×</span></div>
+          <div class="control"><label for="animation-fade">动作淡入淡出</label><input id="animation-fade" type="range" min="0" max="2" step="0.1" value="0.4"><span class="value" data-for="animation-fade">0.4 秒</span></div>
           <div class="switch-row"><span>循环播放</span><label class="switch"><input id="animation-loop" type="checkbox" checked><span></span></label></div>
+        </section>
+        <section class="section">
+          <div class="section-head"><h2>相机 VMD</h2><span class="readout" id="camera-vmd-status">未载入</span></div>
+          <div class="button-row"><button id="load-camera-vmd" class="command"><i data-lucide="video"></i>选择文件</button><button id="remove-camera-vmd" class="command" disabled><i data-lucide="x"></i>移除</button></div>
+          <input id="camera-vmd-file" class="file-input" type="file" accept=".vmd,application/octet-stream">
+          <div class="switch-row"><span>跟随 VMD 镜头</span><label class="switch"><input id="camera-vmd-enabled" type="checkbox" disabled><span></span></label></div>
+        </section>
+        <section class="section">
+          <div class="section-head"><h2>音频同步</h2><span class="readout" id="audio-status">未载入</span></div>
+          <div class="button-row"><button id="load-audio" class="command"><i data-lucide="music"></i>选择音频</button><button id="remove-audio" class="command" disabled><i data-lucide="x"></i>移除</button></div>
+          <input id="audio-file" class="file-input" type="file" accept="audio/*,.wav,.mp3,.ogg,.m4a,.flac">
+          <div class="control"><label for="audio-delay">音频延迟</label><input id="audio-delay" type="range" min="-5" max="5" step="0.05" value="0"><span class="value" data-for="audio-delay">0.00 秒</span></div>
+          <div class="control"><label for="audio-volume">音量</label><input id="audio-volume" type="range" min="0" max="1" step="0.01" value="0.8"><span class="value" data-for="audio-volume">80%</span></div>
         </section>
         <section class="section">
           <div class="section-head"><h2>头发与裙摆物理</h2><span class="readout" id="physics-status">默认关闭</span></div>
@@ -451,7 +504,13 @@ HTML = r'''<!doctype html>
 
   const root = new THREE.Group();
   scene.add(root);
+  const accessoryRoot = new THREE.Group();
+  scene.add(accessoryRoot);
   let mesh = null;
+  let modelCatalog = [];
+  let selectedAccessoryKey = null;
+  let accessorySerial = 0;
+  const accessories = new Map();
   let skeletonHelper = null;
   let selectedPoseObject = null;
   let activeIk = null;
@@ -464,9 +523,19 @@ HTML = r'''<!doctype html>
   let historySuspended = false;
   let poseGestureStart = null;
   let currentClip = null;
+  let currentMotionKey = null;
+  const motionClips = new Map();
   let animationHelper = null;
   let animationMixer = null;
   let animationAction = null;
+  let playbackClock = 0;
+  let cameraClip = null;
+  let cameraAnimationHelper = null;
+  let cameraAnimationMixer = null;
+  let cameraAnimationAction = null;
+  let preCameraVmdSnapshot = null;
+  let audioElement = null;
+  let audioObjectUrl = null;
   let nativeIkSolver = null;
   let animationPlaying = false;
   let physicsEnabled = false;
@@ -612,11 +681,46 @@ HTML = r'''<!doctype html>
   controls.addEventListener('change', syncCameraUiFromOrbit);
 
   function resetCamera() {
+    if ($('camera-vmd-enabled')?.checked) { $('camera-vmd-enabled').checked = false; setCameraVmdEnabled(false); }
     $('cam-azimuth').value = '0';
     $('cam-elevation').value = '4';
     $('cam-distance').value = '1.4';
     $('target-height').value = '0.54';
     setCameraFromUi();
+  }
+
+  const cameraPresets = {
+    full: { label: '正面全身', focal: 50, azimuth: 0, elevation: 4, distance: 1.4, targetHeight: 0.54 },
+    bust: { label: '正面半身', focal: 70, azimuth: 0, elevation: 2, distance: 0.9, targetHeight: 0.67 },
+    portrait: { label: '面部特写', focal: 85, azimuth: 0, elevation: 1, distance: 0.62, targetHeight: 0.82 },
+    'three-quarter': { label: '三分之四视角', focal: 65, azimuth: 32, elevation: 3, distance: 1.08, targetHeight: 0.61 },
+    profile: { label: '侧面视角', focal: 70, azimuth: 90, elevation: 2, distance: 1.0, targetHeight: 0.63 },
+    'low-angle': { label: '低机位全身', focal: 42, azimuth: 22, elevation: -8, distance: 1.55, targetHeight: 0.46 }
+  };
+
+  function cameraSnapshot() {
+    return {
+      position: camera.position.toArray(), target: controls.target.toArray(),
+      focal: Number($('focal').value), sensor: Number($('sensor').value)
+    };
+  }
+
+  function applyCameraSnapshot(snapshot) {
+    if (!snapshot || !Array.isArray(snapshot.position) || !Array.isArray(snapshot.target)) throw new Error('机位书签无效');
+    camera.position.fromArray(snapshot.position); controls.target.fromArray(snapshot.target);
+    $('focal').value = String(THREE.MathUtils.clamp(Number(snapshot.focal) || 50, 18, 120));
+    $('sensor').value = String(THREE.MathUtils.clamp(Number(snapshot.sensor) || 36, 24, 50));
+    updateCameraOptics(); camera.lookAt(controls.target); controls.update(); syncCameraUiFromOrbit();
+  }
+
+  function applyCameraPreset() {
+    const preset = cameraPresets[$('camera-preset').value];
+    if (!preset || !mesh) return;
+    if ($('camera-vmd-enabled').checked) { $('camera-vmd-enabled').checked = false; setCameraVmdEnabled(false); }
+    $('focal').value = String(preset.focal); $('cam-azimuth').value = String(preset.azimuth);
+    $('cam-elevation').value = String(preset.elevation); $('cam-distance').value = String(preset.distance);
+    $('target-height').value = String(preset.targetHeight);
+    updateCameraOptics(); setCameraFromUi(); $('camera-preset-status').textContent = preset.label;
   }
 
   function updateLights() {
@@ -1027,6 +1131,79 @@ HTML = r'''<!doctype html>
     $('model-yaw').value = '0'; $('auto-rotate').checked = false; updateModelDisplay(); syncPoseUiFromObject(); endPoseGesture('全身复位');
   }
 
+  const handPresetLabels = { open: '张开', relaxed: '放松', fist: '握拳', point: '指向', peace: '剪刀手' };
+
+  function boneSide(name) {
+    if (/左|(?:^|[_.])L(?:$|[_.])|left/i.test(name)) return 'left';
+    if (/右|(?:^|[_.])R(?:$|[_.])|right/i.test(name)) return 'right';
+    return '';
+  }
+
+  function setBoneEuler(bone, degrees) {
+    if (!bone) return false;
+    const existing = poseOverrides.get(bone) || { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
+    existing.quaternion.setFromEuler(new THREE.Euler(...degrees.map(THREE.MathUtils.degToRad), 'XYZ'));
+    poseOverrides.set(bone, clampOverride(bone, existing)); applyOverrideToObject(bone); return true;
+  }
+
+  function findPresetBone(patterns, side = '') {
+    return (mesh?.skeleton?.bones || []).find((bone) => (!side || boneSide(bone.name || '') === side) && patterns.some((pattern) => pattern.test(bone.name || ''))) || null;
+  }
+
+  function applyHandPreset(key) {
+    if (!mesh) return;
+    const selectedSide = $('hand-preset-side').value;
+    const sides = selectedSide === 'both' ? ['left', 'right'] : [selectedSide];
+    beginPoseGesture(); let matched = 0;
+    for (const bone of mesh.skeleton.bones) {
+      const side = boneSide(bone.name || '');
+      if (!sides.includes(side) || /指先|finger.?tip/i.test(bone.name || '') || !/親指|人指|中指|薬指|小指|thumb|index|middle|ring|pinky|finger/i.test(bone.name || '')) continue;
+      const isThumb = /親指|thumb/i.test(bone.name || '');
+      const isIndex = /人指|index/i.test(bone.name || '');
+      const isMiddle = /中指|middle/i.test(bone.name || '');
+      let bend = 0;
+      if (key === 'relaxed') bend = isThumb ? 14 : isIndex ? 18 : isMiddle ? 24 : 30;
+      if (key === 'fist') bend = isThumb ? 32 : 58;
+      if (key === 'point') bend = isIndex ? 0 : isThumb ? 28 : 58;
+      if (key === 'peace') bend = isIndex || isMiddle ? 0 : isThumb ? 28 : 58;
+      if (key === 'open') poseOverrides.delete(bone);
+      else setBoneEuler(bone, [0, 0, (side === 'left' ? -1 : 1) * bend]);
+      applyOverrideToObject(bone); matched += 1;
+    }
+    syncPoseUiFromObject(); endPoseGesture(`手势：${handPresetLabels[key] || key}`);
+    $('pose-preset-status').textContent = matched ? `${handPresetLabels[key]} · ${selectedSide === 'both' ? '双手' : selectedSide === 'left' ? '左手' : '右手'}` : '未匹配手指骨骼';
+  }
+
+  const bodyPresetLabels = { neutral: '基础姿态', 'arms-down': '自然垂臂', relaxed: '轻松站姿', 'wave-left': '左手挥手', 'wave-right': '右手挥手', contrapposto: '重心站姿' };
+
+  function applyBodyPreset(key) {
+    if (!mesh) return;
+    beginPoseGesture(); poseOverrides.clear(); let matched = 0;
+    const apply = (patterns, side, degrees) => { if (setBoneEuler(findPresetBone(patterns, side), degrees)) matched += 1; };
+    if (key === 'arms-down' || key === 'relaxed' || key === 'contrapposto') {
+      apply([/^左腕$/, /^arm(?:[_.]?L)?$/i], 'left', [0, 0, 42]); apply([/^右腕$/, /^arm(?:[_.]?R)?$/i], 'right', [0, 0, -42]);
+      apply([/^左ひじ$/, /^elbow(?:[_.]?L)?$/i], 'left', [0, -8, 8]); apply([/^右ひじ$/, /^elbow(?:[_.]?R)?$/i], 'right', [0, 8, -8]);
+    }
+    if (key === 'relaxed') {
+      apply([/^上半身$/, /^spine$/i], '', [0, 4, 0]); apply([/^頭$/, /^head$/i], '', [2, -5, 0]);
+      apply([/^左足$/, /^leg(?:[_.]?L)?$/i], 'left', [0, 0, 4]); apply([/^右足$/, /^leg(?:[_.]?R)?$/i], 'right', [0, 0, -4]);
+    }
+    if (key === 'wave-left' || key === 'wave-right') {
+      const side = key.endsWith('left') ? 'left' : 'right'; const sign = side === 'left' ? 1 : -1;
+      apply([new RegExp(`^${side === 'left' ? '左' : '右'}腕$`), /^arm/i], side, [0, 0, 80 * sign]);
+      apply([new RegExp(`^${side === 'left' ? '左' : '右'}ひじ$`), /^elbow/i], side, [0, 0, 80 * sign]);
+      apply([new RegExp(`^${side === 'left' ? '左' : '右'}手首$`), /^wrist/i], side, [0, 18 * sign, 12 * sign]);
+      const other = side === 'left' ? 'right' : 'left'; apply([new RegExp(`^${other === 'left' ? '左' : '右'}腕$`), /^arm/i], other, [0, 0, other === 'left' ? 38 : -38]);
+    }
+    if (key === 'contrapposto') {
+      apply([/^下半身$/, /lower.?body/i], '', [0, 0, 6]); apply([/^上半身$/, /^spine$/i], '', [0, 0, -5]);
+      apply([/^右ひざ$/, /^knee(?:[_.]?R)?$/i], 'right', [8, 0, 0]);
+    }
+    for (const object of restTransforms.keys()) applyOverrideToObject(object);
+    syncPoseUiFromObject(); endPoseGesture(`姿势模板：${bodyPresetLabels[key] || key}`);
+    $('pose-preset-status').textContent = key === 'neutral' || matched ? bodyPresetLabels[key] : '未匹配标准骨骼';
+  }
+
   function selectBoneFromSurface(event) {
     if (!mesh?.skeleton || !$('surface-select').checked || gizmoInteraction || activeIk) return;
     const rect = renderer.domElement.getBoundingClientRect();
@@ -1279,13 +1456,55 @@ HTML = r'''<!doctype html>
     return `${String(minutes).padStart(2, '0')}:${remainder.toFixed(3).padStart(6, '0')}`;
   }
 
+  function playbackDuration() {
+    const audioDuration = Number.isFinite(audioElement?.duration) ? Math.max(0, audioElement.duration + Number($('audio-delay').value)) : 0;
+    return Math.max(currentClip?.duration || 0, $('camera-vmd-enabled').checked ? cameraClip?.duration || 0 : 0, audioDuration);
+  }
+
+  function playbackTime() {
+    return playbackClock;
+  }
+
+  function hasPlaybackSource() {
+    return Boolean(currentClip || ($('camera-vmd-enabled').checked && cameraClip) || audioElement);
+  }
+
+  function configureAnimationAction(action, clip) {
+    if (!action || !clip) return;
+    action.enabled = true;
+    action.setLoop($('animation-loop').checked ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    action.clampWhenFinished = !$('animation-loop').checked;
+  }
+
+  function setMotionActionsPaused(paused) {
+    if (!animationMixer) return;
+    for (const [key, clip] of motionClips) {
+      const action = animationMixer.clipAction(clip);
+      const contributes = key === currentMotionKey || action.getEffectiveWeight() > 0.0001;
+      action.paused = paused || !contributes;
+      if (!action.paused) action.play();
+    }
+  }
+
+  function settleMotionBlend() {
+    if (!animationMixer) return;
+    for (const [key, clip] of motionClips) {
+      const action = animationMixer.clipAction(clip);
+      action.stopFading(); action.setEffectiveWeight(key === currentMotionKey ? 1 : 0);
+      action.paused = !animationPlaying || key !== currentMotionKey;
+    }
+  }
+
   function updateAnimationUi() {
-    const duration = currentClip?.duration || 0;
-    const time = animationMixer ? Math.min(animationMixer.time, duration) : 0;
+    const duration = playbackDuration();
+    const time = Math.min(playbackTime(), duration || Infinity);
     $('animation-time').max = String(Math.max(duration, 0.001));
     if (!$('animation-time').matches(':active')) $('animation-time').value = String(time);
     $('animation-time-label').textContent = `${formatTime(time)} / ${formatTime(duration)}`;
-    $('animation-status').textContent = currentClip ? (animationPlaying ? '播放中' : '已暂停') : '未载入';
+    $('animation-status').textContent = hasPlaybackSource() ? (animationPlaying ? '播放中' : '已暂停') : '未载入';
+    const enabled = hasPlaybackSource();
+    ['animation-time', 'animation-play', 'animation-stop'].forEach((id) => $(id).disabled = !enabled);
+    $('animation-remove').disabled = !currentClip;
     const state = animationPlaying ? 'playing' : 'paused';
     if ($('animation-play').dataset.state !== state) {
       $('animation-play').dataset.state = state;
@@ -1298,7 +1517,8 @@ HTML = r'''<!doctype html>
     if (!mesh) return;
     if (animationHelper?.meshes.includes(mesh)) animationHelper.remove(mesh);
     animationHelper = null; animationMixer = null; animationAction = null;
-    if (!currentClip && !physicsEnabled) {
+    const clips = [...motionClips.values()];
+    if (!clips.length && !physicsEnabled) {
       mesh.pose();
       for (const object of restTransforms.keys()) animationBaseTransforms.set(object, cloneTransform(object));
       applyPoseOverrides(); updateAnimationUi(); return;
@@ -1310,16 +1530,18 @@ HTML = r'''<!doctype html>
       maxStepNum: Number($('physics-quality').value),
       gravity: new THREE.Vector3(0, -98 * Number($('physics-gravity').value), 0)
     };
-    if (currentClip) params.animation = currentClip;
+    if (clips.length) params.animation = clips;
     animationHelper.add(mesh, params);
     const objects = animationHelper.objects.get(mesh);
     animationMixer = objects?.mixer || null;
-    animationAction = animationMixer?._actions?.[0] || null;
-    if (animationAction) {
-      animationAction.paused = !animationPlaying;
-      animationAction.setLoop($('animation-loop').checked ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
-      animationAction.clampWhenFinished = !$('animation-loop').checked;
-      animationMixer.setTime(Math.min(preserveTime, currentClip.duration));
+    animationAction = currentClip && animationMixer ? animationMixer.clipAction(currentClip) : null;
+    if (animationMixer) {
+      for (const [key, clip] of motionClips) {
+        const action = animationMixer.clipAction(clip); configureAnimationAction(action, clip);
+        const active = key === currentMotionKey;
+        action.setEffectiveWeight(active ? 1 : 0); action.paused = !animationPlaying || !active;
+      }
+      animationMixer.setTime(Math.min(preserveTime, currentClip?.duration || 0));
     }
     animationHelper.enable('physics', physicsEnabled);
     animationHelper.update(0);
@@ -1327,41 +1549,157 @@ HTML = r'''<!doctype html>
     applyPoseOverrides(); updateAnimationUi();
   }
 
-  function loadVmdFile(file) {
-    if (!file || !mesh) return;
-    const url = URL.createObjectURL(file);
+  function rebuildMotionSelect() {
+    const select = $('motion-select'); select.replaceChildren();
+    if (!motionClips.size) { const option = document.createElement('option'); option.value = ''; option.textContent = '尚未添加动作'; select.append(option); return; }
+    for (const [key, clip] of motionClips) {
+      const option = document.createElement('option'); option.value = key; option.textContent = clip.userData?.fileName || clip.name || key; select.append(option);
+    }
+    if (currentMotionKey && motionClips.has(currentMotionKey)) select.value = currentMotionKey;
+  }
+
+  async function loadVmdFiles(files) {
+    const list = [...files]; if (!list.length || !mesh) return;
     $('animation-status').textContent = '解析中';
-    const loader = new MMDLoader();
-    loader.loadAnimation(url, mesh, (clip) => {
-      URL.revokeObjectURL(url);
-      currentClip = clip; animationPlaying = false;
-      $('animation-file').textContent = file.name.length > 18 ? `${file.name.slice(0, 15)}…` : file.name;
-      ['animation-time', 'animation-play', 'animation-stop', 'animation-remove'].forEach((id) => $(id).disabled = false);
-      rebuildAnimationHelper(0);
-      setStatus('VMD 已载入', 'ready');
-    }, undefined, (error) => {
-      URL.revokeObjectURL(url); $('animation-status').textContent = '载入失败'; console.error(error);
-    });
+    for (const file of list) {
+      const url = URL.createObjectURL(file); const loader = new MMDLoader();
+      try {
+        const clip = await new Promise((resolve, reject) => loader.loadAnimation(url, mesh, resolve, undefined, reject));
+        const baseKey = `${file.name}:${file.size}:${file.lastModified}`; let key = baseKey; let suffix = 2;
+        while (motionClips.has(key)) key = `${baseKey}:${suffix++}`;
+        clip.userData ||= {}; clip.userData.fileName = file.name; motionClips.set(key, clip);
+        if (!currentClip) { currentMotionKey = key; currentClip = clip; }
+      } catch (error) { console.error(error); $('animation-status').textContent = `${file.name} 失败`; }
+      finally { URL.revokeObjectURL(url); }
+    }
+    rebuildMotionSelect(); animationPlaying = false; rebuildAnimationHelper(0);
+    $('animation-file').textContent = currentClip?.userData?.fileName || '--'; setStatus('VMD 动作库已更新', 'ready');
+  }
+
+  function switchMotion(key, useFade = true) {
+    const nextClip = motionClips.get(key); if (!nextClip || nextClip === currentClip) return;
+    const previousAction = animationAction; currentMotionKey = key; currentClip = nextClip;
+    if (!animationMixer) rebuildAnimationHelper(0);
+    else {
+      const nextAction = animationMixer.clipAction(nextClip); configureAnimationAction(nextAction, nextClip);
+      nextAction.reset().setEffectiveWeight(1).play(); nextAction.paused = !animationPlaying;
+      const fade = useFade ? Number($('animation-fade').value) : 0;
+      if (previousAction && animationPlaying && fade > 0) { previousAction.paused = false; previousAction.crossFadeTo(nextAction, fade, true); }
+      else for (const clip of motionClips.values()) animationMixer.clipAction(clip).stopFading().setEffectiveWeight(clip === nextClip ? 1 : 0);
+      animationAction = nextAction;
+    }
+    playbackClock = 0; if (cameraAnimationMixer) { cameraAnimationMixer.setTime(0); cameraAnimationHelper?.update(0); }
+    $('motion-select').value = key; $('animation-file').textContent = nextClip.userData?.fileName || nextClip.name; syncAudioToTime(0, animationPlaying); updateAnimationUi();
   }
 
   function toggleAnimationPlayback() {
-    if (!animationAction) return;
+    if (!hasPlaybackSource()) return;
     animationPlaying = !animationPlaying;
-    animationAction.paused = !animationPlaying;
-    if (animationMixer.time >= currentClip.duration - 0.01) animationMixer.setTime(0);
+    const duration = playbackDuration(); if (playbackTime() >= duration - 0.01) setPlaybackTime(0);
+    setMotionActionsPaused(!animationPlaying);
+    if (cameraAnimationAction) { cameraAnimationAction.paused = !animationPlaying; if (animationPlaying && $('camera-vmd-enabled').checked) cameraAnimationAction.play(); }
+    syncAudioToTime(playbackTime(), animationPlaying);
     updateAnimationUi();
   }
 
   function stopAnimation() {
-    if (!animationMixer) return;
-    animationPlaying = false; animationAction.paused = true; animationMixer.setTime(0); animationHelper.update(0);
-    applyPoseOverrides(); updateAnimationUi();
+    animationPlaying = false; settleMotionBlend(); if (cameraAnimationAction) cameraAnimationAction.paused = true; setPlaybackTime(0);
+    audioElement?.pause(); applyPoseOverrides(); updateAnimationUi();
   }
 
   function removeAnimation() {
-    animationPlaying = false; currentClip = null; $('animation-file').textContent = '--';
-    ['animation-time', 'animation-play', 'animation-stop', 'animation-remove'].forEach((id) => $(id).disabled = true);
-    rebuildAnimationHelper(0); updateAnimationUi();
+    if (!currentMotionKey) return;
+    motionClips.delete(currentMotionKey); const next = motionClips.entries().next().value;
+    currentMotionKey = next?.[0] || null; currentClip = next?.[1] || null; animationPlaying = false;
+    $('animation-file').textContent = currentClip?.userData?.fileName || '--'; rebuildMotionSelect(); rebuildAnimationHelper(0); updateAnimationUi();
+  }
+
+  function setPlaybackTime(time) {
+    const safe = Math.max(0, Number(time) || 0);
+    playbackClock = safe;
+    if (animationMixer) { animationMixer.setTime(safe); animationHelper?.update(0); }
+    if (cameraAnimationMixer) { cameraAnimationMixer.setTime(safe); cameraAnimationHelper?.update(0); }
+    syncAudioToTime(safe, animationPlaying); applyPoseOverrides();
+  }
+
+  function loadVpdFile(file) {
+    if (!file || !mesh) return;
+    const url = URL.createObjectURL(file); const loader = new MMDLoader();
+    loader.loadVPD(url, false, (vpd) => {
+      URL.revokeObjectURL(url); beginPoseGesture(); poseOverrides.clear(); let matched = 0;
+      for (const item of vpd.bones || []) {
+        const bone = mesh.skeleton.bones.find((candidate) => candidate.name === item.name); if (!bone) continue;
+        poseOverrides.set(bone, clampOverride(bone, { position: new THREE.Vector3().fromArray(item.translation), quaternion: new THREE.Quaternion().fromArray(item.quaternion) })); matched += 1;
+      }
+      applyPoseOverrides(); syncPoseUiFromObject(); endPoseGesture(`VPD：${file.name}`); $('pose-preset-status').textContent = matched ? `VPD · ${matched} 骨骼` : 'VPD 未匹配骨骼';
+    }, undefined, (error) => { URL.revokeObjectURL(url); $('pose-preset-status').textContent = 'VPD 载入失败'; console.error(error); });
+  }
+
+  function clearCameraVmd(restoreCamera = true) {
+    $('camera-vmd-enabled').checked = false; $('camera-vmd-enabled').disabled = true; $('remove-camera-vmd').disabled = true;
+    controls.enabled = true;
+    if (cameraAnimationHelper?.camera === camera) cameraAnimationHelper.remove(camera);
+    cameraAnimationHelper = null; cameraAnimationMixer = null; cameraAnimationAction = null; cameraClip = null;
+    if (restoreCamera && preCameraVmdSnapshot) applyCameraSnapshot(preCameraVmdSnapshot);
+    preCameraVmdSnapshot = null; $('camera-vmd-status').textContent = '未载入';
+    if (!hasPlaybackSource()) animationPlaying = false;
+    updateAnimationUi();
+  }
+
+  function setCameraVmdEnabled(enabled) {
+    if (!cameraClip) { $('camera-vmd-enabled').checked = false; return; }
+    controls.enabled = !enabled;
+    if (enabled) {
+      if (cameraAnimationAction) { cameraAnimationAction.paused = !animationPlaying; if (animationPlaying) cameraAnimationAction.play(); }
+      if (cameraAnimationMixer) cameraAnimationMixer.setTime(playbackClock);
+      cameraAnimationHelper?.update(0); $('camera-vmd-status').textContent = '已启用';
+    }
+    else {
+      if (cameraAnimationAction) cameraAnimationAction.paused = true;
+      if (preCameraVmdSnapshot) applyCameraSnapshot(preCameraVmdSnapshot);
+      if (!hasPlaybackSource()) animationPlaying = false;
+      $('camera-vmd-status').textContent = '已暂停';
+    }
+    updateAnimationUi();
+  }
+
+  function loadCameraVmdFile(file) {
+    if (!file) return;
+    const url = URL.createObjectURL(file); const loader = new MMDLoader(); $('camera-vmd-status').textContent = '解析中';
+    loader.loadAnimation(url, camera, (clip) => {
+      URL.revokeObjectURL(url);
+      if (!preCameraVmdSnapshot) preCameraVmdSnapshot = cameraSnapshot();
+      if (cameraAnimationHelper?.camera === camera) cameraAnimationHelper.remove(camera);
+      cameraClip = clip; cameraAnimationHelper = new MMDAnimationHelper({ sync: false }); cameraAnimationHelper.add(camera, { animation: clip });
+      cameraAnimationMixer = cameraAnimationHelper.objects.get(camera)?.mixer || null; cameraAnimationAction = cameraAnimationMixer?.clipAction(clip) || null;
+      configureAnimationAction(cameraAnimationAction, clip); if (cameraAnimationAction) cameraAnimationAction.paused = !animationPlaying;
+      if (cameraAnimationMixer) { cameraAnimationMixer.setTime(playbackClock); cameraAnimationHelper.update(0); }
+      $('camera-vmd-enabled').disabled = false; $('camera-vmd-enabled').checked = true; $('remove-camera-vmd').disabled = false; controls.enabled = false;
+      $('camera-vmd-status').textContent = file.name.length > 16 ? `${file.name.slice(0, 13)}…` : file.name; updateAnimationUi();
+    }, undefined, (error) => { URL.revokeObjectURL(url); $('camera-vmd-status').textContent = '载入失败'; console.error(error); });
+  }
+
+  function syncAudioToTime(time, shouldPlay) {
+    if (!audioElement || !Number.isFinite(audioElement.duration)) return;
+    const desired = time - Number($('audio-delay').value);
+    audioElement.volume = Number($('audio-volume').value); audioElement.playbackRate = Number($('animation-speed').value);
+    if (desired < 0 || desired >= audioElement.duration) { audioElement.pause(); if (desired < 0) audioElement.currentTime = 0; return; }
+    if (Math.abs(audioElement.currentTime - desired) > 0.18) audioElement.currentTime = desired;
+    if (shouldPlay && audioElement.paused) audioElement.play().catch(() => { $('audio-status').textContent = '点击播放以授权音频'; }); else if (!shouldPlay) audioElement.pause();
+  }
+
+  function removeAudio() {
+    audioElement?.pause(); if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
+    audioElement = null; audioObjectUrl = null; $('audio-status').textContent = '未载入'; $('remove-audio').disabled = true;
+    if (!hasPlaybackSource()) animationPlaying = false;
+    updateAnimationUi();
+  }
+
+  function loadAudioFile(file) {
+    if (!file) return; removeAudio(); audioObjectUrl = URL.createObjectURL(file); audioElement = new Audio(audioObjectUrl); audioElement.preload = 'metadata';
+    audioElement.volume = Number($('audio-volume').value); $('audio-status').textContent = '读取中'; $('remove-audio').disabled = false;
+    audioElement.addEventListener('loadedmetadata', () => { $('audio-status').textContent = file.name.length > 16 ? `${file.name.slice(0, 13)}…` : file.name; updateAnimationUi(); }, { once: true });
+    audioElement.addEventListener('ended', () => { if (!$('animation-loop').checked && !currentClip && !cameraClip) { animationPlaying = false; updateAnimationUi(); } });
   }
 
   function loadClassicScript(url) {
@@ -1449,8 +1787,7 @@ HTML = r'''<!doctype html>
         hdrTexturePreset = preset;
       }
       scene.environment = hdrTexture; scene.background = hdrTexture;
-      scene.environmentIntensity = Number($('environment-intensity').value);
-      scene.backgroundIntensity = Math.min(1, Number($('environment-intensity').value));
+      updatePostProcessing();
       $('environment-status').textContent = label.split(' · ')[0];
     } catch (error) {
       if (requestId !== hdrRequestId) return;
@@ -1466,12 +1803,18 @@ HTML = r'''<!doctype html>
     bokehPass.uniforms.maxblur.value = Number($('dof-blur').value);
     bokehPass.uniforms.aperture.value = Number($('dof-blur').value) * 0.01;
     document.querySelector('[data-for="environment-intensity"]').textContent = Number($('environment-intensity').value).toFixed(2);
+    document.querySelector('[data-for="hdr-rotation"]').textContent = `${Number($('hdr-rotation').value).toFixed(0)}°`;
+    document.querySelector('[data-for="background-intensity"]').textContent = Number($('background-intensity').value).toFixed(2);
+    document.querySelector('[data-for="background-blur"]').textContent = `${Math.round(Number($('background-blur').value) * 100)}%`;
     document.querySelector('[data-for="bloom-strength"]').textContent = Number($('bloom-strength').value).toFixed(2);
     document.querySelector('[data-for="dof-focus"]').textContent = Number($('dof-focus').value).toFixed(1);
     document.querySelector('[data-for="dof-blur"]').textContent = Number($('dof-blur').value).toFixed(4);
     if (scene.environment) {
       scene.environmentIntensity = Number($('environment-intensity').value);
-      scene.backgroundIntensity = Math.min(1, Number($('environment-intensity').value));
+      scene.backgroundIntensity = Number($('background-intensity').value);
+      scene.backgroundBlurriness = Number($('background-blur').value);
+      const rotation = THREE.MathUtils.degToRad(Number($('hdr-rotation').value));
+      scene.backgroundRotation.set(0, rotation, 0); scene.environmentRotation.set(0, rotation, 0);
     }
   }
 
@@ -1537,31 +1880,131 @@ HTML = r'''<!doctype html>
     $('recording-indicator').classList.remove('active'); $('record-turntable').disabled = false; $('capture-status').textContent = '已保存视频';
   }
 
+  function disposeRenderable(object) {
+    const disposedTextures = new Set();
+    object?.traverse((child) => {
+      child.geometry?.dispose?.();
+      const materials = Array.isArray(child.material) ? child.material : child.material ? [child.material] : [];
+      for (const material of materials) {
+        for (const value of Object.values(material)) if (value?.isTexture && !disposedTextures.has(value)) { value.dispose(); disposedTextures.add(value); }
+        material.dispose?.();
+      }
+    });
+  }
+
+  function clearPrimaryModel() {
+    animationPlaying = false; playbackClock = 0; audioElement?.pause(); motionClips.clear(); currentClip = null; currentMotionKey = null;
+    if (animationHelper?.meshes.includes(mesh)) animationHelper.remove(mesh);
+    animationHelper = null; animationMixer = null; animationAction = null; physicsEnabled = false;
+    $('physics-enabled').checked = false; $('reset-physics').disabled = true; $('physics-status').textContent = physicsInitialized ? '已停止' : '默认关闭';
+    deactivateIkHandle(true); for (const handle of ikHandles.values()) scene.remove(handle.target); ikHandles.clear();
+    transformControls.detach(); if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper.material?.dispose?.(); skeletonHelper = null; }
+    if (mesh) { root.remove(mesh); disposeRenderable(mesh); }
+    mesh = null; selectedPoseObject = null; restTransforms.clear(); animationBaseTransforms.clear(); poseOverrides.clear(); poseHistory.length = 0; poseFuture.length = 0;
+    root.position.set(0, 0, 0); root.quaternion.identity(); root.scale.setScalar(1); rebuildMotionSelect(); updateHistoryUi(); updateAnimationUi();
+  }
+
+  function populateModelSelect(selectedId) {
+    const select = $('model-select'); select.replaceChildren();
+    for (const item of modelCatalog) { const option = document.createElement('option'); option.value = item.id; option.textContent = `${item.name} · ${(item.bytes / 1048576).toFixed(1)} MB`; select.append(option); }
+    if (modelCatalog.some((item) => item.id === selectedId)) select.value = selectedId;
+  }
+
+  async function loadPrimaryModel(entry) {
+    if (!entry) throw new Error('没有可载入的主模型');
+    $('switch-model').disabled = true; $('loading').style.display = 'block'; $('error-box').style.display = 'none'; $('progress').style.width = '2%';
+    $('loading-name').textContent = entry.name; setStatus('准备载入');
+    const loader = new MMDLoader();
+    try {
+      const loadedMesh = await new Promise((resolve, reject) => loader.load(
+        entry.url,
+        resolve,
+        (event) => {
+          const loaded = event.loaded || 0; const total = event.total || entry.bytes || 1; const percent = Math.min(99, Math.round(loaded / total * 100));
+          $('progress').style.width = `${Math.max(2, percent)}%`; $('loading-percent').textContent = `${percent}%`; setStatus(`载入 ${percent}%`);
+        }, reject
+      ));
+      if (mesh) clearPrimaryModel();
+      prepareModel(loadedMesh);
+      $('model-name').textContent = entry.name; $('model-meta').textContent = `PMX · ${(entry.bytes / 1048576).toFixed(1)} MB`;
+      $('progress').style.width = '100%'; $('loading-percent').textContent = '100%'; setTimeout(() => { $('loading').style.display = 'none'; }, 250);
+      setStatus('模型就绪', 'ready'); $('model-library-status').textContent = entry.name; $('model-select').value = entry.id;
+    } finally { $('switch-model').disabled = false; }
+  }
+
+  function rebuildAccessorySelect(preferredKey = selectedAccessoryKey) {
+    const select = $('accessory-select'); select.replaceChildren();
+    if (!accessories.size) { const option = document.createElement('option'); option.value = ''; option.textContent = '暂无附加项'; select.append(option); selectedAccessoryKey = null; }
+    else {
+      for (const [key, item] of accessories) { const option = document.createElement('option'); option.value = key; option.textContent = item.name; select.append(option); }
+      selectedAccessoryKey = accessories.has(preferredKey) ? preferredKey : accessories.keys().next().value; select.value = selectedAccessoryKey;
+    }
+    syncAccessoryUi();
+  }
+
+  function syncAccessoryUi() {
+    const item = accessories.get(selectedAccessoryKey); const disabled = !item;
+    ['accessory-x', 'accessory-y', 'accessory-z', 'accessory-yaw', 'accessory-scale'].forEach((id) => $(id).disabled = disabled);
+    $('remove-accessory').disabled = disabled;
+    if (!item) { $('accessory-status').textContent = '未选择'; return; }
+    const group = item.group;
+    $('accessory-x').value = String(group.position.x); $('accessory-y').value = String(group.position.y); $('accessory-z').value = String(group.position.z);
+    $('accessory-yaw').value = String(THREE.MathUtils.radToDeg(group.rotation.y)); $('accessory-scale').value = String(group.scale.x);
+    document.querySelector('[data-for="accessory-x"]').textContent = group.position.x.toFixed(2); document.querySelector('[data-for="accessory-y"]').textContent = group.position.y.toFixed(2);
+    document.querySelector('[data-for="accessory-z"]').textContent = group.position.z.toFixed(2); document.querySelector('[data-for="accessory-yaw"]').textContent = `${THREE.MathUtils.radToDeg(group.rotation.y).toFixed(0)}°`;
+    document.querySelector('[data-for="accessory-scale"]').textContent = `${group.scale.x.toFixed(2)}×`; $('accessory-status').textContent = item.name;
+  }
+
+  function updateAccessoryTransform() {
+    const item = accessories.get(selectedAccessoryKey); if (!item) return;
+    item.group.position.set(Number($('accessory-x').value), Number($('accessory-y').value), Number($('accessory-z').value));
+    item.group.rotation.y = THREE.MathUtils.degToRad(Number($('accessory-yaw').value)); item.group.scale.setScalar(Number($('accessory-scale').value)); syncAccessoryUi();
+  }
+
+  function registerAccessory(object, name, objectUrls = []) {
+    object.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = false; child.frustumCulled = false; } });
+    const box = new THREE.Box3().setFromObject(object); const center = box.getCenter(new THREE.Vector3());
+    object.position.x -= center.x; object.position.z -= center.z; object.position.y -= box.min.y;
+    const group = new THREE.Group(); group.add(object); group.position.x = (accessories.size + 1) * modelHeight * 0.35; accessoryRoot.add(group);
+    const key = `accessory-${++accessorySerial}`; accessories.set(key, { name, group, object, objectUrls }); selectedAccessoryKey = key; rebuildAccessorySelect(key);
+    $('model-library-status').textContent = `已添加 ${name}`; return key;
+  }
+
+  async function loadServerAccessory(entry) {
+    if (!entry) return; $('model-library-status').textContent = '载入附加项…';
+    const object = await new Promise((resolve, reject) => new MMDLoader().load(entry.url, resolve, undefined, reject)); registerAccessory(object, entry.name);
+  }
+
+  async function loadLocalAccessory(files) {
+    const list = [...files]; const modelFile = list.filter((file) => /\.(pmx|pmd)$/i.test(file.name)).sort((a, b) => a.name.localeCompare(b.name))[0];
+    if (!modelFile) throw new Error('所选目录中没有 PMX/PMD 文件');
+    const rootFolder = (modelFile.webkitRelativePath || modelFile.name).split('/')[0]; const urls = []; const pathMap = new Map(); const basenameMap = new Map();
+    for (const file of list) {
+      const fullPath = (file.webkitRelativePath || file.name).replace(/\\/g, '/'); const relative = fullPath.startsWith(`${rootFolder}/`) ? fullPath.slice(rootFolder.length + 1) : fullPath;
+      const url = URL.createObjectURL(file); urls.push(url); pathMap.set(relative.toLowerCase(), url);
+      const base = file.name.toLowerCase(); basenameMap.set(base, basenameMap.has(base) ? null : url);
+    }
+    const manager = new THREE.LoadingManager(); manager.setURLModifier((requested) => {
+      let normalized; try { normalized = decodeURIComponent(requested).replace(/\\/g, '/').toLowerCase(); } catch { normalized = requested.replace(/\\/g, '/').toLowerCase(); }
+      for (const [path, url] of pathMap) if (normalized.endsWith(path)) return url;
+      const fallback = basenameMap.get(normalized.split('/').pop()); return fallback || requested;
+    });
+    const modelUrl = pathMap.get(((modelFile.webkitRelativePath || modelFile.name).replace(/\\/g, '/').split('/').slice(1).join('/') || modelFile.name).toLowerCase());
+    try { const object = await new Promise((resolve, reject) => new MMDLoader(manager).load(modelUrl, resolve, undefined, reject)); registerAccessory(object, modelFile.name.replace(/\.(pmx|pmd)$/i, ''), urls); }
+    catch (error) { urls.forEach(URL.revokeObjectURL); throw error; }
+  }
+
+  function removeAccessory() {
+    const item = accessories.get(selectedAccessoryKey); if (!item) return;
+    accessoryRoot.remove(item.group); disposeRenderable(item.object); item.objectUrls.forEach(URL.revokeObjectURL); accessories.delete(selectedAccessoryKey); rebuildAccessorySelect();
+  }
+
   async function loadModel() {
     const configResponse = await fetch('/api/config');
     if (!configResponse.ok) throw new Error(`配置请求失败：HTTP ${configResponse.status}`);
     const config = await configResponse.json();
-    $('model-name').textContent = config.modelName;
-    $('loading-name').textContent = config.modelName;
-    $('model-meta').textContent = `PMX · ${(config.modelBytes / 1048576).toFixed(1)} MB`;
-    const loader = new MMDLoader();
-    await new Promise((resolve, reject) => loader.load(
-      config.modelUrl,
-      (object) => { prepareModel(object); resolve(); },
-      (event) => {
-        const loaded = event.loaded || 0;
-        const total = event.total || config.modelBytes || 1;
-        const percent = Math.min(99, Math.round(loaded / total * 100));
-        $('progress').style.width = `${Math.max(2, percent)}%`;
-        $('loading-percent').textContent = `${percent}%`;
-        setStatus(`载入 ${percent}%`);
-      },
-      reject
-    ));
-    $('progress').style.width = '100%';
-    $('loading-percent').textContent = '100%';
-    setTimeout(() => { $('loading').style.display = 'none'; }, 250);
-    setStatus('模型就绪', 'ready');
+    modelCatalog = Array.isArray(config.models) && config.models.length ? config.models : [{ id: config.modelName, name: config.modelName, bytes: config.modelBytes, url: config.modelUrl }];
+    populateModelSelect(config.selectedModel || modelCatalog[0].id); await loadPrimaryModel(modelCatalog.find((item) => item.id === (config.selectedModel || '')) || modelCatalog[0]);
   }
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => {
@@ -1569,10 +2012,27 @@ HTML = r'''<!doctype html>
     document.querySelectorAll('.panel').forEach((panel) => panel.classList.toggle('active', panel.id === tab.dataset.panel));
   }));
 
-  ['focal', 'sensor'].forEach((id) => $(id).addEventListener('input', updateCameraOptics));
-  ['cam-azimuth', 'cam-elevation', 'cam-distance', 'target-height'].forEach((id) => $(id).addEventListener('input', setCameraFromUi));
+  function releaseCameraVmdForManualControl() {
+    if (!$('camera-vmd-enabled').checked) return;
+    $('camera-vmd-enabled').checked = false; setCameraVmdEnabled(false);
+  }
+  ['focal', 'sensor'].forEach((id) => $(id).addEventListener('input', () => { releaseCameraVmdForManualControl(); updateCameraOptics(); }));
+  ['cam-azimuth', 'cam-elevation', 'cam-distance', 'target-height'].forEach((id) => $(id).addEventListener('input', () => { releaseCameraVmdForManualControl(); setCameraFromUi(); }));
   ['key-intensity', 'light-azimuth', 'light-elevation', 'shadow-softness', 'key-color', 'ambient-intensity', 'fill-intensity', 'fill-color'].forEach((id) => $(id).addEventListener('input', updateLights));
   ['model-yaw', 'model-scale', 'rotate-speed', 'cast-shadow', 'show-ground', 'show-grid', 'wireframe', 'show-outline'].forEach((id) => $(id).addEventListener('input', updateModelDisplay));
+  $('switch-model').addEventListener('click', () => {
+    const entry = modelCatalog.find((item) => item.id === $('model-select').value); loadPrimaryModel(entry).catch(showError);
+  });
+  $('add-server-accessory').addEventListener('click', () => {
+    const entry = modelCatalog.find((item) => item.id === $('model-select').value); loadServerAccessory(entry).catch((error) => { $('model-library-status').textContent = '附加失败'; console.error(error); });
+  });
+  $('add-local-accessory').addEventListener('click', () => $('local-accessory-files').click());
+  $('local-accessory-files').addEventListener('change', () => {
+    loadLocalAccessory($('local-accessory-files').files).catch((error) => { $('model-library-status').textContent = '本地模型失败'; console.error(error); }); $('local-accessory-files').value = '';
+  });
+  $('accessory-select').addEventListener('change', () => { selectedAccessoryKey = $('accessory-select').value || null; syncAccessoryUi(); });
+  $('remove-accessory').addEventListener('click', removeAccessory);
+  ['accessory-x', 'accessory-y', 'accessory-z', 'accessory-yaw', 'accessory-scale'].forEach((id) => $(id).addEventListener('input', updateAccessoryTransform));
   ['pose-rot-x', 'pose-rot-y', 'pose-rot-z'].forEach((id) => { $(id).addEventListener('pointerdown', beginPoseGesture); $(id).addEventListener('input', applyPoseRotation); $(id).addEventListener('change', () => endPoseGesture('旋转骨骼')); });
   ['pose-pos-x', 'pose-pos-y', 'pose-pos-z'].forEach((id) => { $(id).addEventListener('pointerdown', beginPoseGesture); $(id).addEventListener('input', applyPosePosition); $(id).addEventListener('change', () => endPoseGesture('移动骨骼')); });
   document.querySelectorAll('#pose-mode .segment').forEach((button) => button.addEventListener('click', () => setPoseMode(button.dataset.mode)));
@@ -1601,6 +2061,8 @@ HTML = r'''<!doctype html>
   $('mirror-copy').addEventListener('click', () => { if (!selectedPoseObject) return; beginPoseGesture(); mirrorObjectPose(selectedPoseObject, true); endPoseGesture('镜像复制'); });
   $('swap-sides').addEventListener('click', () => { if (!mesh) return; beginPoseGesture(); swapSidePoses(); syncPoseUiFromObject(); endPoseGesture('交换左右'); });
   $('live-mirror').addEventListener('input', () => $('mirror-status').textContent = $('live-mirror').checked ? '实时对称' : '独立');
+  document.querySelectorAll('.hand-preset').forEach((button) => button.addEventListener('click', () => applyHandPreset(button.dataset.hand)));
+  $('apply-body-preset').addEventListener('click', () => applyBodyPreset($('body-preset').value));
   $('reset-selected-bone').addEventListener('click', resetSelectedPose);
   $('reset-all-pose').addEventListener('click', resetAllPose);
   $('undo-pose').addEventListener('click', undoPose);
@@ -1612,6 +2074,8 @@ HTML = r'''<!doctype html>
     try { const before = poseDocument(); applyPoseDocument(JSON.parse(await file.text())); poseGestureStart = before; endPoseGesture('导入姿势'); } catch (error) { alert(error.message); }
     $('pose-file').value = '';
   });
+  $('load-vpd').addEventListener('click', () => $('vpd-file').click());
+  $('vpd-file').addEventListener('change', () => { loadVpdFile($('vpd-file').files[0]); $('vpd-file').value = ''; });
   $('save-slot').addEventListener('click', () => {
     localStorage.setItem(`mikuMmdPoseSlot${$('pose-slot').value}`, poseSignature()); $('history-status').textContent = `槽位 ${$('pose-slot').value} 已保存`;
   });
@@ -1619,10 +2083,10 @@ HTML = r'''<!doctype html>
     const saved = localStorage.getItem(`mikuMmdPoseSlot${$('pose-slot').value}`); if (!saved) { $('history-status').textContent = '槽位为空'; return; }
     try { const before = poseDocument(); applyPoseDocument(JSON.parse(saved)); poseGestureStart = before; endPoseGesture(`载入槽位 ${$('pose-slot').value}`); } catch (error) { alert(error.message); }
   });
-  transformControls.addEventListener('dragging-changed', (event) => { controls.enabled = !event.value; });
+  transformControls.addEventListener('dragging-changed', (event) => { controls.enabled = !event.value && !$('camera-vmd-enabled').checked; });
   transformControls.addEventListener('mouseDown', () => {
     gizmoInteraction = true; beginPoseGesture();
-    if (animationPlaying && animationAction) { animationPlaying = false; animationAction.paused = true; updateAnimationUi(); }
+    if (animationPlaying) { animationPlaying = false; setMotionActionsPaused(true); if (cameraAnimationAction) cameraAnimationAction.paused = true; audioElement?.pause(); updateAnimationUi(); }
   });
   transformControls.addEventListener('mouseUp', () => { endPoseGesture(activeIk ? `IK ${activeIk.label}` : '操纵器调整'); setTimeout(() => { gizmoInteraction = false; }, 0); });
   transformControls.addEventListener('objectChange', () => {
@@ -1640,22 +2104,42 @@ HTML = r'''<!doctype html>
   $('background').addEventListener('input', () => { if (!$('hdr-environment').checked) scene.background = new THREE.Color($('background').value); });
   $('hdr-environment').addEventListener('input', () => setHdrEnvironment($('hdr-environment').checked));
   $('hdr-preset').addEventListener('change', () => { if ($('hdr-environment').checked) setHdrEnvironment(true); });
-  ['environment-intensity', 'bloom-strength', 'dof-focus', 'dof-blur'].forEach((id) => $(id).addEventListener('input', updatePostProcessing));
+  ['environment-intensity', 'hdr-rotation', 'background-intensity', 'background-blur', 'bloom-strength', 'dof-focus', 'dof-blur'].forEach((id) => $(id).addEventListener('input', updatePostProcessing));
   ['bloom-enabled', 'dof-enabled'].forEach((id) => $(id).addEventListener('input', updatePostProcessing));
   $('reset-camera').addEventListener('click', resetCamera);
+  $('apply-camera-preset').addEventListener('click', applyCameraPreset);
+  $('save-camera-bookmark').addEventListener('click', () => {
+    const slot = $('camera-bookmark').value; localStorage.setItem(`mikuMmdCameraBookmark${slot}`, JSON.stringify(cameraSnapshot())); $('camera-preset-status').textContent = `书签 ${slot} 已保存`;
+  });
+  $('load-camera-bookmark').addEventListener('click', () => {
+    const slot = $('camera-bookmark').value; const saved = localStorage.getItem(`mikuMmdCameraBookmark${slot}`);
+    if (!saved) { $('camera-preset-status').textContent = `书签 ${slot} 为空`; return; }
+    try { releaseCameraVmdForManualControl(); applyCameraSnapshot(JSON.parse(saved)); $('camera-preset-status').textContent = `书签 ${slot}`; } catch (error) { $('camera-preset-status').textContent = '书签无效'; console.error(error); }
+  });
   $('load-vmd').addEventListener('click', () => $('vmd-file').click());
-  $('vmd-file').addEventListener('change', () => { loadVmdFile($('vmd-file').files[0]); $('vmd-file').value = ''; });
+  $('vmd-file').addEventListener('change', () => { loadVmdFiles($('vmd-file').files); $('vmd-file').value = ''; });
+  $('motion-select').addEventListener('change', () => switchMotion($('motion-select').value, true));
   $('animation-play').addEventListener('click', toggleAnimationPlayback);
   $('animation-stop').addEventListener('click', stopAnimation);
   $('animation-remove').addEventListener('click', removeAnimation);
   $('animation-time').addEventListener('input', () => {
-    if (!animationMixer) return; animationPlaying = false; animationAction.paused = true; animationMixer.setTime(Number($('animation-time').value)); animationHelper.update(0);
-    for (const object of restTransforms.keys()) animationBaseTransforms.set(object, cloneTransform(object)); applyPoseOverrides(); updateAnimationUi();
+    animationPlaying = false; settleMotionBlend(); if (cameraAnimationAction) cameraAnimationAction.paused = true;
+    setPlaybackTime(Number($('animation-time').value)); updateAnimationUi();
   });
-  $('animation-speed').addEventListener('input', () => { document.querySelector('[data-for="animation-speed"]').textContent = `${Number($('animation-speed').value).toFixed(2)}×`; });
+  $('animation-speed').addEventListener('input', () => { document.querySelector('[data-for="animation-speed"]').textContent = `${Number($('animation-speed').value).toFixed(2)}×`; if (audioElement) audioElement.playbackRate = Number($('animation-speed').value); });
+  $('animation-fade').addEventListener('input', () => { document.querySelector('[data-for="animation-fade"]').textContent = `${Number($('animation-fade').value).toFixed(1)} 秒`; });
   $('animation-loop').addEventListener('input', () => {
-    if (!animationAction) return; animationAction.setLoop($('animation-loop').checked ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); animationAction.clampWhenFinished = !$('animation-loop').checked;
+    for (const clip of motionClips.values()) configureAnimationAction(animationMixer?.clipAction(clip), clip); configureAnimationAction(cameraAnimationAction, cameraClip);
   });
+  $('load-camera-vmd').addEventListener('click', () => $('camera-vmd-file').click());
+  $('camera-vmd-file').addEventListener('change', () => { loadCameraVmdFile($('camera-vmd-file').files[0]); $('camera-vmd-file').value = ''; });
+  $('remove-camera-vmd').addEventListener('click', () => clearCameraVmd(true));
+  $('camera-vmd-enabled').addEventListener('input', () => setCameraVmdEnabled($('camera-vmd-enabled').checked));
+  $('load-audio').addEventListener('click', () => $('audio-file').click());
+  $('audio-file').addEventListener('change', () => { loadAudioFile($('audio-file').files[0]); $('audio-file').value = ''; });
+  $('remove-audio').addEventListener('click', removeAudio);
+  $('audio-delay').addEventListener('input', () => { document.querySelector('[data-for="audio-delay"]').textContent = `${Number($('audio-delay').value).toFixed(2)} 秒`; syncAudioToTime(playbackTime(), animationPlaying); });
+  $('audio-volume').addEventListener('input', () => { document.querySelector('[data-for="audio-volume"]').textContent = `${Math.round(Number($('audio-volume').value) * 100)}%`; if (audioElement) audioElement.volume = Number($('audio-volume').value); });
   $('physics-enabled').addEventListener('input', () => setPhysicsEnabled($('physics-enabled').checked));
   ['physics-gravity', 'physics-quality'].forEach((id) => $(id).addEventListener('input', updatePhysicsSettings));
   $('reset-physics').addEventListener('click', resetPhysics);
@@ -1722,19 +2206,37 @@ HTML = r'''<!doctype html>
   function animate(now) {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.1);
+    const playbackSpeed = Number($('animation-speed').value);
+    let playbackWrapped = false;
+    if (animationPlaying) {
+      playbackClock += delta * playbackSpeed;
+      const duration = playbackDuration();
+      if ($('animation-loop').checked && duration > 0 && playbackClock >= duration) { playbackClock %= duration; playbackWrapped = true; }
+    }
     if (animationHelper) {
-      if (animationMixer) animationMixer.timeScale = Number($('animation-speed').value);
-      animationHelper.update(delta);
+      if (animationMixer) animationMixer.timeScale = playbackSpeed;
+      if (playbackWrapped && animationMixer) { settleMotionBlend(); animationMixer.setTime(playbackClock); animationHelper.update(0); }
+      else animationHelper.update(delta);
+      if (animationMixer) for (const [key, clip] of motionClips) {
+        const action = animationMixer.clipAction(clip);
+        if (key !== currentMotionKey && action.getEffectiveWeight() <= 0.0001) action.paused = true;
+      }
       if (currentClip) for (const object of restTransforms.keys()) animationBaseTransforms.set(object, cloneTransform(object));
       applyPoseOverrides();
-      if (animationPlaying && currentClip && !$('animation-loop').checked && animationMixer?.time >= currentClip.duration) {
-        animationPlaying = false; if (animationAction) animationAction.paused = true;
-      }
     } else applyPoseOverrides();
+    if (cameraAnimationHelper && $('camera-vmd-enabled').checked) {
+      if (cameraAnimationMixer) cameraAnimationMixer.timeScale = playbackSpeed;
+      if (playbackWrapped && cameraAnimationMixer) { cameraAnimationMixer.setTime(playbackClock); cameraAnimationHelper.update(0); }
+      else cameraAnimationHelper.update(delta);
+    }
     if (activeIk) solveActiveIk();
     updateEyeTracking(); updateAutomaticBlink(delta);
     if ($('auto-rotate').checked && mesh) root.rotation.y += delta * 0.35 * Number($('rotate-speed').value);
-    updateTurntableRecording(now); controls.update(); updateSelectionVisual(); updateAnimationUi(); renderScene();
+    if (audioElement && animationPlaying) syncAudioToTime(playbackTime(), true);
+    if (animationPlaying && !$('animation-loop').checked && playbackTime() >= playbackDuration() - 0.001) {
+      animationPlaying = false; setMotionActionsPaused(true); if (cameraAnimationAction) cameraAnimationAction.paused = true; audioElement?.pause();
+    }
+    updateTurntableRecording(now); if (!cameraAnimationHelper || !$('camera-vmd-enabled').checked) controls.update(); updateSelectionVisual(); updateAnimationUi(); renderScene();
     fpsFrames += 1; fpsElapsed += delta;
     if (fpsElapsed >= 0.75) {
       $('fps').textContent = `${Math.round(fpsFrames / fpsElapsed)} FPS`;
@@ -1783,10 +2285,21 @@ class ViewerHandler(BaseHTTPRequestHandler):
             self._send_bytes(HTML.encode("utf-8"), "text/html; charset=utf-8", send_body, "no-cache")
         elif path == "/api/config":
             model = self.viewer_server.model_file
+            model_files = sorted(self.viewer_server.model_dir.glob("*.pmx")) + sorted(self.viewer_server.model_dir.glob("*.pmd"))
             payload = json.dumps({
                 "modelName": model.stem,
                 "modelBytes": model.stat().st_size,
                 "modelUrl": "/model/" + urllib.parse.quote(model.name),
+                "selectedModel": model.name,
+                "models": [
+                    {
+                        "id": item.name,
+                        "name": item.stem,
+                        "bytes": item.stat().st_size,
+                        "url": "/model/" + urllib.parse.quote(item.name),
+                    }
+                    for item in model_files
+                ],
             }, ensure_ascii=False).encode("utf-8")
             self._send_bytes(payload, "application/json; charset=utf-8", send_body, "no-cache")
         elif path == "/healthz":
