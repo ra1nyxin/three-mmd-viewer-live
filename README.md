@@ -3,7 +3,7 @@
 
 `three-mmd-viewer-live` 一个以单个 Python 文件部署的 MMD 局域网页面查看器。它能够直接加载 PMX/PMD 模型及其贴图，在现代浏览器中完成模型浏览、灯光调整、骨骼姿势编辑、IK 控制、VMD 动作播放、表情控制、按需物理模拟、HDR 与后期处理，以及高清截图和转台视频导出。
 
-项目不需要安装 Node.js、npm、Web 框架或 Python 第三方包。服务端、HTML、CSS 和 JavaScript 均包含在 [`main.py`](main.py) 中，模型文件仍保留在用户自己的目录里。
+项目不需要安装 Node.js、npm、Web 框架或 Python 第三方包。服务端、HTML、CSS 和 JavaScript 均包含在 [`main.py`](main.py) 中，仓库的 [`len/`](len/) 目录提供默认演示模型，也可以通过启动参数加载用户自己的模型目录。
 
 ## 功能概览
 
@@ -112,11 +112,11 @@ git clone https://github.com/ra1nyxin/three-mmd-viewer-live.git
 cd three-mmd-viewer-live
 ```
 
-也可以直接下载仓库中的 `main.py`，脚本本身即可运行。
+也可以只下载仓库中的 `main.py`，但需要通过 `--model-dir` 指向自行准备的模型目录。
 
 ## 准备模型目录
 
-推荐保持模型作者提供的原始目录层级。例如：
+仓库已经包含可直接预览的 `len/m.pmx`，克隆后无需额外准备模型。若要查看其他模型，请保持模型作者提供的原始目录层级。例如：
 
 ```text
 /data/miku-model/
@@ -137,6 +137,16 @@ cd three-mmd-viewer-live
 
 ## 启动方式
 
+### 直接启动仓库模型
+
+在仓库目录运行：
+
+```bash
+python3 main.py
+```
+
+默认模型目录固定为 `main.py` 所在目录下的 `len/`，并自动选择按名称排序后的第一个 PMX 文件，即 `len/m.pmx`。默认值不受启动命令所在工作目录影响。
+
 ### 指定模型目录
 
 这是最明确的启动方式：
@@ -153,12 +163,12 @@ python3 main.py \
   --model "model.pmx"
 ```
 
-### 从模型目录启动
+### 从其他工作目录启动
 
-`--model-dir` 的默认值是启动命令所在的当前目录。因此也可以进入模型目录后运行脚本：
+默认目录相对于 `main.py` 定位，因此从其他工作目录执行脚本仍会加载仓库内模型：
 
 ```bash
-cd /data/miku-model
+cd /tmp
 python3 /path/to/three-mmd-viewer-live/main.py
 ```
 
@@ -201,7 +211,7 @@ Press Ctrl+C to stop.
 | --- | --- | --- |
 | `--host` | `0.0.0.0` | HTTP 服务监听地址 |
 | `--port` | `51943` | HTTP 服务监听端口 |
-| `--model-dir` | 当前工作目录 | PMX/PMD 与贴图所在目录 |
+| `--model-dir` | `main.py` 同级的 `len/` | PMX/PMD 与贴图所在目录 |
 | `--model` | 自动选择 | `--model-dir` 内的模型文件名 |
 | `-h`, `--help` | - | 显示帮助信息 |
 

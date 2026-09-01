@@ -1,0 +1,10 @@
+[Info]
+Version = 3
+
+[Effect]
+Obj = none
+Obj[13] = fx\C1.fx
+Obj[14] = fx\C1.fx
+Obj[15] = fx\C1.fx
+Obj[17] = fx\C1.fx
+

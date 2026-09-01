@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
-DEFAULT_MODEL_DIR = Path.cwd()
+DEFAULT_MODEL_DIR = Path(__file__).resolve().parent / "len"
 DEFAULT_PORT = 51943
 # r172 removed the official MMDLoader. Pin the tested r170 release so the
 # loader, parser, toon shader, and OutlineEffect stay version-aligned.
@@ -1859,7 +1859,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Serve a local MMD PMX model in a browser.")
     parser.add_argument("--host", default="0.0.0.0", help="listen address (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"listen port (default: {DEFAULT_PORT})")
-    parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR, help="directory containing PMX and textures")
+    parser.add_argument(
+        "--model-dir",
+        type=Path,
+        default=DEFAULT_MODEL_DIR,
+        help=f"directory containing PMX and textures (default: {DEFAULT_MODEL_DIR})",
+    )
     parser.add_argument("--model", type=Path, help="PMX filename inside --model-dir")
     return parser.parse_args()
 
