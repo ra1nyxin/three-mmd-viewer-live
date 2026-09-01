@@ -25,6 +25,16 @@ DEFAULT_PORT = 51943
 # r172 removed the official MMDLoader. Pin the tested r170 release so the
 # loader, parser, toon shader, and OutlineEffect stay version-aligned.
 THREE_VERSION = "0.170.0"
+HDR_ASSETS = {
+    "studio.hdr": "royal_esplanade_1k.hdr",  # Backward-compatible alias.
+    "royal-esplanade.hdr": "royal_esplanade_1k.hdr",
+    "venice-sunset.hdr": "venice_sunset_1k.hdr",
+    "pedestrian-overpass.hdr": "pedestrian_overpass_1k.hdr",
+    "moonless-golf.hdr": "moonless_golf_1k.hdr",
+    "quarry.hdr": "quarry_01_1k.hdr",
+    "spruit-sunrise.hdr": "spruit_sunrise_1k.hdr",
+    "blouberg-sunrise.hdr": "blouberg_sunrise_2_1k.hdr",
+}
 ALLOWED_ASSET_SUFFIXES = {
     ".pmx", ".pmd", ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".spa", ".sph"
 }
@@ -261,8 +271,17 @@ HTML = r'''<!doctype html>
           <div class="control color-control"><label for="background">背景</label><input id="background" type="color" value="#cad5d3"></div>
         </section>
         <section class="section">
-          <div class="section-head"><h2>环境与后期</h2><span class="readout" id="environment-status">基础</span></div>
-          <div class="switch-row"><span>HDR 摄影棚环境</span><label class="switch"><input id="hdr-environment" type="checkbox"><span></span></label></div>
+          <div class="section-head"><h2>全景与后期</h2><span class="readout" id="environment-status">纯色背景</span></div>
+          <div class="control"><label for="hdr-preset">360° HDR 全景</label><select id="hdr-preset" class="select">
+            <option value="royal-esplanade">室内商场 · Royal Esplanade</option>
+            <option value="venice-sunset">水城日落 · Venice Sunset</option>
+            <option value="pedestrian-overpass">城市天桥 · Pedestrian Overpass</option>
+            <option value="moonless-golf">无月球场 · Moonless Golf</option>
+            <option value="quarry">岩石采场 · Quarry</option>
+            <option value="spruit-sunrise">河谷日出 · Spruit Sunrise</option>
+            <option value="blouberg-sunrise">海岸日出 · Blouberg Sunrise</option>
+          </select></div>
+          <div class="switch-row"><span>显示 HDR 全景背景</span><label class="switch"><input id="hdr-environment" type="checkbox"><span></span></label></div>
           <div class="control"><label for="environment-intensity">环境强度</label><input id="environment-intensity" type="range" min="0" max="2" step="0.05" value="0.7"><span class="value" data-for="environment-intensity">0.70</span></div>
           <div class="switch-row"><span>泛光</span><label class="switch"><input id="bloom-enabled" type="checkbox"><span></span></label></div>
           <div class="control"><label for="bloom-strength">泛光强度</label><input id="bloom-strength" type="range" min="0" max="2" step="0.05" value="0.35"><span class="value" data-for="bloom-strength">0.35</span></div>
@@ -454,6 +473,8 @@ HTML = r'''<!doctype html>
   let physicsInitialized = false;
   let ammoLoading = null;
   let hdrTexture = null;
+  let hdrTexturePreset = null;
+  let hdrRequestId = 0;
   let turntableRecording = null;
   let blinkClock = 0;
   let eyeBones = [];
@@ -1405,21 +1426,34 @@ HTML = r'''<!doctype html>
   }
 
   async function setHdrEnvironment(enabled) {
+    const requestId = ++hdrRequestId;
     if (!enabled) {
-      scene.environment = null; scene.background = new THREE.Color($('background').value); $('environment-status').textContent = '基础'; return;
+      scene.environment = null; scene.background = new THREE.Color($('background').value); $('environment-status').textContent = '纯色背景'; return;
     }
+    const preset = $('hdr-preset').value;
+    const label = $('hdr-preset').selectedOptions[0]?.textContent || 'HDR 全景';
     $('environment-status').textContent = '载入 HDR…';
     try {
-      if (!hdrTexture) {
-        const source = await new RGBELoader().loadAsync('/vendor/assets/studio.hdr');
-        source.mapping = THREE.EquirectangularReflectionMapping;
-        hdrTexture = source;
+      let nextTexture = hdrTexture;
+      if (!nextTexture || hdrTexturePreset !== preset) {
+        nextTexture = await new RGBELoader().loadAsync(`/vendor/assets/${encodeURIComponent(preset)}.hdr`);
+        nextTexture.mapping = THREE.EquirectangularReflectionMapping;
+      }
+      if (requestId !== hdrRequestId || !$('hdr-environment').checked || $('hdr-preset').value !== preset) {
+        if (nextTexture !== hdrTexture) nextTexture.dispose();
+        return;
+      }
+      if (nextTexture !== hdrTexture) {
+        hdrTexture?.dispose();
+        hdrTexture = nextTexture;
+        hdrTexturePreset = preset;
       }
       scene.environment = hdrTexture; scene.background = hdrTexture;
       scene.environmentIntensity = Number($('environment-intensity').value);
       scene.backgroundIntensity = Math.min(1, Number($('environment-intensity').value));
-      $('environment-status').textContent = 'HDR 摄影棚';
+      $('environment-status').textContent = label.split(' · ')[0];
     } catch (error) {
+      if (requestId !== hdrRequestId) return;
       console.error(error); $('hdr-environment').checked = false; scene.environment = null; scene.background = new THREE.Color($('background').value); $('environment-status').textContent = 'HDR 失败';
     }
   }
@@ -1605,6 +1639,7 @@ HTML = r'''<!doctype html>
   });
   $('background').addEventListener('input', () => { if (!$('hdr-environment').checked) scene.background = new THREE.Color($('background').value); });
   $('hdr-environment').addEventListener('input', () => setHdrEnvironment($('hdr-environment').checked));
+  $('hdr-preset').addEventListener('change', () => { if ($('hdr-environment').checked) setHdrEnvironment(true); });
   ['environment-intensity', 'bloom-strength', 'dof-focus', 'dof-blur'].forEach((id) => $(id).addEventListener('input', updatePostProcessing));
   ['bloom-enabled', 'dof-enabled'].forEach((id) => $(id).addEventListener('input', updatePostProcessing));
   $('reset-camera').addEventListener('click', resetCamera);
@@ -1811,8 +1846,8 @@ class ViewerHandler(BaseHTTPRequestHandler):
         if ".." in normalized.split("/") or not normalized.endswith((".js", ".wasm", ".hdr")):
             self.send_error(HTTPStatus.FORBIDDEN)
             return
-        if normalized == "assets/studio.hdr":
-            url = "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r170/examples/textures/equirectangular/royal_esplanade_1k.hdr"
+        if normalized.startswith("assets/") and (hdr_file := HDR_ASSETS.get(normalized.removeprefix("assets/"))):
+            url = f"https://cdn.jsdelivr.net/gh/mrdoob/three.js@r170/examples/textures/equirectangular/{hdr_file}"
         elif normalized == "lucide/lucide.min.js":
             url = "https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"
         elif normalized.startswith("build/"):
