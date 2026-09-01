@@ -1,10 +1,9 @@
-# three-mmd-viewer-live
+<img width="1905" height="954" alt="ae75cfd814f1b5d39105f9c956ab9e26" src="https://github.com/user-attachments/assets/810d60ef-a2e0-4607-be8a-c92cfb0c5bfb" />
+<img width="1908" height="956" alt="a294110d89929780a01cb2593d213068" src="https://github.com/user-attachments/assets/1f3c42df-9be6-4c54-ae5a-ab6429a69a34" />
 
-`three-mmd-viewer-live` 是一个以单个 Python 文件部署的 MMD 局域网页面查看器。它能够直接加载 PMX/PMD 模型及其贴图，在现代浏览器中完成模型浏览、灯光调整、骨骼姿势编辑、IK 控制、VMD 动作播放、表情控制、按需物理模拟、HDR 与后期处理，以及高清截图和转台视频导出。
+`three-mmd-viewer-live` 一个以单个 Python 文件部署的 MMD 局域网页面查看器。它能够直接加载 PMX/PMD 模型及其贴图，在现代浏览器中完成模型浏览、灯光调整、骨骼姿势编辑、IK 控制、VMD 动作播放、表情控制、按需物理模拟、HDR 与后期处理，以及高清截图和转台视频导出。
 
 项目不需要安装 Node.js、npm、Web 框架或 Python 第三方包。服务端、HTML、CSS 和 JavaScript 均包含在 [`main.py`](main.py) 中，模型文件仍保留在用户自己的目录里。
-
-> 本仓库不包含任何 MMD 模型、贴图或动作文件。使用模型、动作和贴图前，请自行确认作者允许的使用范围、署名要求、商业限制与再分发规则。
 
 ## 功能概览
 
@@ -423,17 +422,3 @@ python3 main.py --host 127.0.0.1 --model-dir /data/test-model
 7. HDR、泛光和景深开关可以独立工作。
 8. 普通、透明和高分辨率截图正常。
 9. 桌面与移动尺寸下参数面板不遮挡主要操作。
-
-## 版权与第三方资源
-
-本仓库当前不附带模型、贴图或动作资源，也没有附带独立的项目许可证文件。代码使用权限以仓库所有者后续发布的许可说明为准。
-
-运行时使用的第三方项目和资源遵循各自的许可：
-
-- [Three.js](https://threejs.org/)
-- [mmd-parser](https://github.com/takahirox/mmd-parser)
-- [Ammo.js](https://github.com/kripken/ammo.js/)
-- [Lucide](https://lucide.dev/)
-- Three.js 示例中使用的 HDR 环境资源
-
-提交问题或改进前，请确保测试材料允许用于调试和截图展示，不要将禁止再分发的模型上传到 Issue、Pull Request 或公开仓库。
