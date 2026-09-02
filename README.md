@@ -453,3 +453,5 @@ python3 main.py --host 127.0.0.1 --model-dir /data/test-model
 9. HDR 旋转、背景亮度、模糊、泛光和景深可以独立工作。
 10. 普通、透明和高分辨率截图正常。
 11. 桌面与移动尺寸下参数面板不遮挡主要操作。
+
+<img width="1904" height="956" alt="image" src="https://github.com/user-attachments/assets/52b6e8cb-959d-489b-b732-67494ddf995a" />
