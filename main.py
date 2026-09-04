@@ -72,12 +72,12 @@ HTML = r'''<!doctype html>
     button, input { font: inherit; letter-spacing: 0; }
     button { color: inherit; }
     #app { position: relative; width: 100%; height: 100%; isolation: isolate; }
-    #viewport { position: absolute; inset: 0 var(--panel) 0 0; overflow: hidden; background: #cad5d3; }
+    #viewport { position: absolute; inset: 0 var(--panel) 0 0; overflow: hidden; background: #cad5d3; transition: inset .22s ease; }
     #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
     #inspector {
       position: absolute; z-index: 10; inset: 0 0 0 auto; width: var(--panel);
       display: flex; flex-direction: column; background: rgba(18, 23, 23, .98);
-      border-left: 1px solid var(--line); box-shadow: -12px 0 28px rgba(0,0,0,.16);
+      border-left: 1px solid var(--line); box-shadow: -12px 0 28px rgba(0,0,0,.16); transition: transform .22s ease;
     }
     .brand { height: 62px; flex: 0 0 62px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
     .brand-mark { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; font-weight: 750; }
@@ -88,6 +88,14 @@ HTML = r'''<!doctype html>
     .icon-button:hover { border-color: var(--line-strong); background: #283130; }
     .icon-button svg { width: 17px; height: 17px; }
     #panel-toggle { display: none; }
+    #sidebar-collapse {
+      position: absolute; z-index: 1; top: 14px; left: -35px; width: 35px; height: 42px;
+      border-right: 0; border-radius: 6px 0 0 6px; box-shadow: -4px 3px 12px rgba(0,0,0,.14);
+    }
+    @media (min-width: 761px) {
+      #app.panel-collapsed #viewport { inset: 0; }
+      #app.panel-collapsed #inspector { transform: translateX(100%); box-shadow: none; }
+    }
     .tabs { display: grid; grid-template-columns: repeat(5, 1fr); flex: 0 0 43px; border-bottom: 1px solid var(--line); }
     .tab { position: relative; border: 0; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
     .tab:hover { color: var(--text); }
@@ -166,6 +174,7 @@ HTML = r'''<!doctype html>
       #inspector { width: min(92vw, 390px); transform: translateX(100%); transition: transform .22s ease; }
       #inspector.open { transform: translateX(0); }
       #panel-toggle { display: grid; }
+      #sidebar-collapse { display: none; }
       .mobile-open { position: absolute; z-index: 8; right: 12px; top: 12px; display: inline-flex; }
       #hud { top: 12px; left: 12px; right: 58px; flex-wrap: wrap; }
       .hud-chip:nth-child(3) { display: none; }
@@ -201,6 +210,7 @@ HTML = r'''<!doctype html>
   </section>
 
   <aside id="inspector">
+    <button id="sidebar-collapse" class="icon-button" title="收起参数面板" aria-label="收起参数面板" aria-controls="inspector" aria-expanded="true"><i data-lucide="panel-right-close"></i></button>
     <header class="brand">
       <div class="brand-mark">M</div>
       <div class="brand-copy">
@@ -424,8 +434,15 @@ HTML = r'''<!doctype html>
           <div class="control"><label for="audio-volume">音量</label><input id="audio-volume" type="range" min="0" max="1" step="0.01" value="0.8"><span class="value" data-for="audio-volume">80%</span></div>
         </section>
         <section class="section">
-          <div class="section-head"><h2>头发与裙摆物理</h2><span class="readout" id="physics-status">默认关闭</span></div>
+          <div class="section-head"><h2>头发、衣摆物理与定向风</h2><span class="readout" id="physics-status">默认关闭</span></div>
           <div class="switch-row"><span>启用 Ammo 物理</span><label class="switch"><input id="physics-enabled" type="checkbox"><span></span></label></div>
+          <div class="switch-row"><span>启用定向风</span><label class="switch"><input id="wind-enabled" type="checkbox"><span></span></label></div>
+          <div class="control"><label for="wind-strength">风力</label><input id="wind-strength" type="range" min="0" max="3000" step="5" value="120"><span class="value" data-for="wind-strength">120</span></div>
+          <div class="control"><label for="wind-azimuth">风向水平角</label><input id="wind-azimuth" type="range" min="-180" max="180" step="1" value="0"><span class="value" data-for="wind-azimuth">0°</span></div>
+          <div class="control"><label for="wind-elevation">风向高度角</label><input id="wind-elevation" type="range" min="-90" max="90" step="1" value="0"><span class="value" data-for="wind-elevation">0°</span></div>
+          <div class="switch-row"><span>反吹</span><label class="switch"><input id="wind-reverse" type="checkbox"><span></span></label></div>
+          <button id="wind-from-camera" class="command" style="width:100%;margin-top:8px"><i data-lucide="crosshair"></i>取当前镜头 → 模型方向</button>
+          <div class="status-line"><span id="wind-direction">推向 0° / 0°</span><strong id="wind-status">关闭</strong></div>
           <div class="control"><label for="physics-gravity">重力强度</label><input id="physics-gravity" type="range" min="0" max="2" step="0.05" value="1"><span class="value" data-for="physics-gravity">1.00×</span></div>
           <div class="control"><label for="physics-quality">模拟质量</label><input id="physics-quality" type="range" min="1" max="4" step="1" value="2"><span class="value" data-for="physics-quality">2</span></div>
           <button id="reset-physics" class="command" style="width:100%;margin-top:9px" disabled><i data-lucide="refresh-cw"></i>重置物理状态</button>
@@ -476,6 +493,7 @@ HTML = r'''<!doctype html>
   import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
   const $ = (id) => document.getElementById(id);
+  const app = $('app');
   const viewport = $('viewport');
   const inspector = $('inspector');
   const scene = new THREE.Scene();
@@ -541,6 +559,8 @@ HTML = r'''<!doctype html>
   let physicsEnabled = false;
   let physicsInitialized = false;
   let ammoLoading = null;
+  const windDirection = new THREE.Vector3();
+  let windAmmoForce = null;
   let hdrTexture = null;
   let hdrTexturePreset = null;
   let hdrRequestId = 0;
@@ -1743,15 +1763,79 @@ HTML = r'''<!doctype html>
     try { await ammoLoading; } finally { ammoLoading = null; }
   }
 
+  function currentMmdPhysics() {
+    return animationHelper && mesh ? animationHelper.objects.get(mesh)?.physics || null : null;
+  }
+
+  function getWindDirection(target = windDirection) {
+    const azimuth = THREE.MathUtils.degToRad(Number($('wind-azimuth').value));
+    const elevation = THREE.MathUtils.degToRad(Number($('wind-elevation').value));
+    const horizontal = Math.cos(elevation);
+    target.set(Math.sin(azimuth) * horizontal, Math.sin(elevation), Math.cos(azimuth) * horizontal);
+    if ($('wind-reverse').checked) target.multiplyScalar(-1);
+    return target.normalize();
+  }
+
+  function isWindBody(rigidBody) {
+    return Boolean(
+      rigidBody?.body && rigidBody.params?.type !== 0 && Number(rigidBody.params?.weight) > 0
+    );
+  }
+
+  function windBodyCount(physics = currentMmdPhysics()) {
+    let count = 0;
+    for (const rigidBody of physics?.bodies || []) if (isWindBody(rigidBody)) count += 1;
+    return count;
+  }
+
+  function updateWindSettings() {
+    const strength = Number($('wind-strength').value);
+    const azimuth = Number($('wind-azimuth').value);
+    const elevation = Number($('wind-elevation').value);
+    document.querySelector('[data-for="wind-strength"]').textContent = strength.toFixed(0);
+    document.querySelector('[data-for="wind-azimuth"]').textContent = `${azimuth.toFixed(0)}°`;
+    document.querySelector('[data-for="wind-elevation"]').textContent = `${elevation.toFixed(0)}°`;
+    $('wind-direction').textContent = `推向 ${azimuth.toFixed(0)}° / ${elevation.toFixed(0)}°${$('wind-reverse').checked ? ' · 反吹' : ''}`;
+    if (!$('wind-enabled').checked) $('wind-status').textContent = '关闭';
+    else if (!physicsEnabled || !currentMmdPhysics()) $('wind-status').textContent = '等待物理';
+    else $('wind-status').textContent = `${windBodyCount()} 刚体受风`;
+  }
+
+  function applyDirectionalWind() {
+    if (!physicsEnabled || !$('wind-enabled').checked || !window.Ammo) return;
+    const physics = currentMmdPhysics();
+    const strength = Number($('wind-strength').value);
+    if (!physics || strength <= 0) return;
+    const force = getWindDirection().multiplyScalar(strength);
+    if (!windAmmoForce) windAmmoForce = new window.Ammo.btVector3(force.x, force.y, force.z);
+    else windAmmoForce.setValue(force.x, force.y, force.z);
+    for (const rigidBody of physics.bodies || []) {
+      if (!isWindBody(rigidBody)) continue;
+      rigidBody.body.activate?.(true);
+      rigidBody.body.applyCentralForce?.(windAmmoForce);
+    }
+  }
+
+  function aimWindFromCamera() {
+    if (!mesh) return;
+    const center = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
+    const direction = center.sub(camera.getWorldPosition(new THREE.Vector3()));
+    if (direction.lengthSq() < 1e-8) return;
+    direction.normalize();
+    $('wind-azimuth').value = String(THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(Math.atan2(direction.x, direction.z)), -180, 180));
+    $('wind-elevation').value = String(THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(Math.asin(direction.y)), -90, 90));
+    updateWindSettings();
+  }
+
   async function setPhysicsEnabled(enabled) {
-    if (!mesh) { $('physics-enabled').checked = false; return; }
+    if (!mesh) { $('physics-enabled').checked = false; updateWindSettings(); return; }
     if (enabled && !physicsInitialized) {
       $('physics-enabled').disabled = true; $('physics-status').textContent = '载入引擎…';
       try { await ensureAmmo(); } catch (error) {
-        console.error(error); $('physics-enabled').checked = false; $('physics-status').textContent = '载入失败'; $('physics-enabled').disabled = false; return;
+        console.error(error); $('physics-enabled').checked = false; $('physics-status').textContent = '载入失败'; $('physics-enabled').disabled = false; updateWindSettings(); return;
       }
       $('physics-enabled').disabled = false;
-      if (!$('physics-enabled').checked) return;
+      if (!$('physics-enabled').checked) { updateWindSettings(); return; }
     }
     const time = animationMixer?.time || 0;
     physicsEnabled = enabled;
@@ -1762,12 +1846,13 @@ HTML = r'''<!doctype html>
       animationHelper?.enable('physics', false);
       $('physics-status').textContent = physicsInitialized ? '已停止' : '默认关闭'; $('reset-physics').disabled = true;
     }
+    updateWindSettings();
   }
 
   function updatePhysicsSettings() {
     document.querySelector('[data-for="physics-gravity"]').textContent = `${Number($('physics-gravity').value).toFixed(2)}×`;
     document.querySelector('[data-for="physics-quality"]').textContent = $('physics-quality').value;
-    const physics = animationHelper && mesh ? animationHelper.objects.get(mesh)?.physics : null;
+    const physics = currentMmdPhysics();
     if (physics) {
       physics.maxStepNum = Number($('physics-quality').value);
       physics.setGravity(new THREE.Vector3(0, -98 * Number($('physics-gravity').value), 0));
@@ -1775,7 +1860,7 @@ HTML = r'''<!doctype html>
   }
 
   function resetPhysics() {
-    const physics = animationHelper && mesh ? animationHelper.objects.get(mesh)?.physics : null;
+    const physics = currentMmdPhysics();
     physics?.reset();
   }
 
@@ -1917,7 +2002,7 @@ HTML = r'''<!doctype html>
     transformControls.detach(); if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper.material?.dispose?.(); skeletonHelper = null; }
     if (mesh) { root.remove(mesh); disposeRenderable(mesh); }
     mesh = null; selectedPoseObject = null; restTransforms.clear(); animationBaseTransforms.clear(); poseOverrides.clear(); poseHistory.length = 0; poseFuture.length = 0;
-    root.position.set(0, 0, 0); root.quaternion.identity(); root.scale.setScalar(1); rebuildMotionSelect(); updateHistoryUi(); updateAnimationUi();
+    root.position.set(0, 0, 0); root.quaternion.identity(); root.scale.setScalar(1); rebuildMotionSelect(); updateHistoryUi(); updateAnimationUi(); updateWindSettings();
   }
 
   function populateModelSelect(selectedId) {
@@ -2027,6 +2112,20 @@ HTML = r'''<!doctype html>
     document.querySelectorAll('.tab').forEach((item) => item.classList.toggle('active', item === tab));
     document.querySelectorAll('.panel').forEach((panel) => panel.classList.toggle('active', panel.id === tab.dataset.panel));
   }));
+
+  function setInspectorCollapsed(collapsed, persist = true) {
+    app.classList.toggle('panel-collapsed', collapsed);
+    const button = $('sidebar-collapse');
+    button.setAttribute('aria-expanded', String(!collapsed));
+    button.title = collapsed ? '展开参数面板' : '收起参数面板';
+    button.setAttribute('aria-label', button.title);
+    button.innerHTML = `<i data-lucide="${collapsed ? 'panel-right-open' : 'panel-right-close'}"></i>`;
+    window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } });
+    if (persist) {
+      try { localStorage.setItem('mikuMmdInspectorCollapsed', String(collapsed)); }
+      catch { /* Storage can be unavailable in a private browser context. */ }
+    }
+  }
 
   function releaseCameraVmdForManualControl() {
     if (!$('camera-vmd-enabled').checked) return;
@@ -2157,6 +2256,9 @@ HTML = r'''<!doctype html>
   $('audio-delay').addEventListener('input', () => { document.querySelector('[data-for="audio-delay"]').textContent = `${Number($('audio-delay').value).toFixed(2)} 秒`; syncAudioToTime(playbackTime(), animationPlaying); });
   $('audio-volume').addEventListener('input', () => { document.querySelector('[data-for="audio-volume"]').textContent = `${Math.round(Number($('audio-volume').value) * 100)}%`; if (audioElement) audioElement.volume = Number($('audio-volume').value); });
   $('physics-enabled').addEventListener('input', () => setPhysicsEnabled($('physics-enabled').checked));
+  $('wind-enabled').addEventListener('input', updateWindSettings);
+  ['wind-strength', 'wind-azimuth', 'wind-elevation', 'wind-reverse'].forEach((id) => $(id).addEventListener('input', updateWindSettings));
+  $('wind-from-camera').addEventListener('click', aimWindFromCamera);
   ['physics-gravity', 'physics-quality'].forEach((id) => $(id).addEventListener('input', updatePhysicsSettings));
   $('reset-physics').addEventListener('click', resetPhysics);
   $('morph-search').addEventListener('input', () => {
@@ -2178,6 +2280,7 @@ HTML = r'''<!doctype html>
   $('fullscreen').addEventListener('click', async () => {
     if (!document.fullscreenElement) await $('app').requestFullscreen(); else await document.exitFullscreen();
   });
+  $('sidebar-collapse').addEventListener('click', () => setInspectorCollapsed(!app.classList.contains('panel-collapsed')));
   $('mobile-open').addEventListener('click', () => inspector.classList.add('open'));
   $('panel-toggle').addEventListener('click', () => inspector.classList.remove('open'));
   window.addEventListener('keydown', (event) => {
@@ -2194,7 +2297,10 @@ HTML = r'''<!doctype html>
   updateModelDisplay();
   updatePostProcessing();
   updatePhysicsSettings();
+  updateWindSettings();
   window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } });
+  try { setInspectorCollapsed(localStorage.getItem('mikuMmdInspectorCollapsed') === 'true', false); }
+  catch { setInspectorCollapsed(false, false); }
 
   const clock = new THREE.Clock();
   let fpsFrames = 0;
@@ -2229,6 +2335,7 @@ HTML = r'''<!doctype html>
       const duration = playbackDuration();
       if ($('animation-loop').checked && duration > 0 && playbackClock >= duration) { playbackClock %= duration; playbackWrapped = true; }
     }
+    applyDirectionalWind();
     if (animationHelper) {
       if (animationMixer) animationMixer.timeScale = playbackSpeed;
       if (playbackWrapped && animationMixer) { settleMotionBlend(); animationMixer.setTime(playbackClock); animationHelper.update(0); }
