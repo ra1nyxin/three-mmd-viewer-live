@@ -1020,6 +1020,20 @@ HTML = r'''<!doctype html>
     syncPoseUiFromObject();
   }
 
+  function clearPoseSelection() {
+    deactivateIkHandle(true);
+    selectedPoseObject = null;
+    transformControls.detach();
+    boneMarker.visible = false;
+    $('bone-label').style.display = 'none';
+    $('pose-selection').classList.remove('visible');
+    $('pose-selection-name').textContent = '--';
+    $('bone-select').selectedIndex = -1;
+    $('favorite-bone').disabled = true;
+    $('favorite-bone').innerHTML = '<i data-lucide="star"></i>收藏当前骨骼';
+    window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } });
+  }
+
   function syncPoseUiFromObject() {
     if (!selectedPoseObject) return;
     const override = poseOverrides.get(selectedPoseObject) || { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
@@ -1205,13 +1219,15 @@ HTML = r'''<!doctype html>
   }
 
   function selectBoneFromSurface(event) {
-    if (!mesh?.skeleton || !$('surface-select').checked || gizmoInteraction || activeIk) return;
+    if (!mesh?.skeleton || gizmoInteraction) return;
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
     const face = raycaster.intersectObject(mesh, false)[0]?.face;
+    if (!face) { clearPoseSelection(); return; }
+    if (!$('surface-select').checked || activeIk) return;
     const skinIndex = mesh.geometry.getAttribute('skinIndex'); const skinWeight = mesh.geometry.getAttribute('skinWeight');
-    if (!face || !skinIndex || !skinWeight) return;
+    if (!skinIndex || !skinWeight) return;
     const totals = new Map(); const getters = ['getX', 'getY', 'getZ', 'getW'];
     for (const vertex of [face.a, face.b, face.c]) getters.forEach((getter) => {
       const weight = skinWeight[getter](vertex); const index = Math.round(skinIndex[getter](vertex));
