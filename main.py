@@ -448,6 +448,20 @@ HTML = r'''<!doctype html>
           <button id="reset-physics" class="command" style="width:100%;margin-top:9px" disabled><i data-lucide="refresh-cw"></i>重置物理状态</button>
         </section>
         <section class="section">
+          <div class="section-head"><h2>动态海面与浸水效果</h2><span class="readout" id="water-status">默认关闭</span></div>
+          <div class="switch-row"><span>启用海平面</span><label class="switch"><input id="water-enabled" type="checkbox"><span></span></label></div>
+          <div class="control"><label for="water-height">海面高度</label><input id="water-height" type="range" min="-0.35" max="1.35" step="0.01" value="0.04"><span class="value" data-for="water-height">4%</span></div>
+          <div class="control"><label for="water-wave-strength">海浪强度</label><input id="water-wave-strength" type="range" min="0" max="0.35" step="0.005" value="0.035"><span class="value" data-for="water-wave-strength">3.5%</span></div>
+          <div class="control"><label for="water-detail">水面细节</label><input id="water-detail" type="range" min="0" max="3" step="0.05" value="1"><span class="value" data-for="water-detail">1.00×</span></div>
+          <div class="control"><label for="water-opacity">水面透明度</label><input id="water-opacity" type="range" min="0.15" max="0.95" step="0.01" value="0.68"><span class="value" data-for="water-opacity">68%</span></div>
+          <div class="control color-control"><label for="water-color">水体颜色</label><input id="water-color" type="color" value="#238ba0"></div>
+          <div class="control"><label for="water-buoyancy">浮力</label><input id="water-buoyancy" type="range" min="0" max="5" step="0.05" value="1.15"><span class="value" data-for="water-buoyancy">1.15×</span></div>
+          <div class="control"><label for="water-drag">水阻</label><input id="water-drag" type="range" min="0" max="12" step="0.1" value="2.4"><span class="value" data-for="water-drag">2.4×</span></div>
+          <div class="control"><label for="wet-darkening">湿润加深</label><input id="wet-darkening" type="range" min="0" max="0.65" step="0.01" value="0.25"><span class="value" data-for="wet-darkening">25%</span></div>
+          <div class="control"><label for="dry-time">干燥时间</label><input id="dry-time" type="range" min="1" max="120" step="1" value="20"><span class="value" data-for="dry-time">20 秒</span></div>
+          <div class="status-line"><span>物理开启后自动作用于动态刚体</span><strong id="water-physics-status">视觉模式</strong></div>
+        </section>
+        <section class="section">
           <div class="section-head"><h2>显示</h2></div>
           <div class="switch-row"><span>模型阴影</span><label class="switch"><input id="cast-shadow" type="checkbox" checked><span></span></label></div>
           <div class="switch-row"><span>地面</span><label class="switch"><input id="show-ground" type="checkbox" checked><span></span></label></div>
@@ -561,6 +575,14 @@ HTML = r'''<!doctype html>
   let ammoLoading = null;
   const windDirection = new THREE.Vector3();
   let windAmmoForce = null;
+  let waterAmmoForce = null;
+  let waterTime = 0;
+  let wetnessAttribute = null;
+  let wetnessAccumulator = 0;
+  let wetnessRemaining = false;
+  let waterSubmergedBodies = 0;
+  let waterStatusElapsed = 0;
+  let cameraUnderwater = false;
   let hdrTexture = null;
   let hdrTexturePreset = null;
   let hdrRequestId = 0;
@@ -622,6 +644,132 @@ HTML = r'''<!doctype html>
   grid.material.opacity = 0.28;
   grid.visible = false;
   scene.add(grid);
+
+  const waterFallbackTexture = new THREE.DataTexture(new Uint8Array([80, 145, 160, 255]), 1, 1);
+  waterFallbackTexture.colorSpace = THREE.SRGBColorSpace;
+  waterFallbackTexture.needsUpdate = true;
+  const waterUniforms = {
+    uTime: { value: 0 },
+    uLevel: { value: 0 },
+    uModelHeight: { value: modelHeight },
+    uWaveAmplitude: { value: modelHeight * 0.035 },
+    uDetail: { value: 1 },
+    uOpacity: { value: 0.68 },
+    uColor: { value: new THREE.Color('#238ba0') },
+    uEnvironment: { value: waterFallbackTexture },
+    uHasEnvironment: { value: 0 },
+    uEnvironmentRotation: { value: 0 }
+  };
+  const waterMaterial = new THREE.ShaderMaterial({
+    uniforms: waterUniforms,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    vertexShader: `
+      uniform float uTime;
+      uniform float uLevel;
+      uniform float uModelHeight;
+      uniform float uWaveAmplitude;
+      uniform float uDetail;
+      varying vec3 vWorldPosition;
+      varying vec3 vWaterNormal;
+
+      void main() {
+        vec4 world = modelMatrix * vec4(position, 1.0);
+        vec2 p = world.xz / max(uModelHeight, 0.001);
+        float q1 = p.x * 1.3 + uTime * 0.9;
+        float q2 = (p.x * 0.65 + p.y * 1.35) * 1.7 - uTime * 1.15;
+        float q3 = (-p.x * 1.4 + p.y * 0.55) * 2.15 + uTime * 0.65;
+        float q4 = (p.x + p.y) * 6.2 + uTime * 1.8;
+        float wave = 0.52 * sin(q1) + 0.30 * sin(q2)
+          + 0.18 * uDetail * sin(q3) + 0.055 * uDetail * sin(q4);
+        vec2 gradient = vec2(
+          0.52 * 1.3 * cos(q1) + 0.30 * 0.65 * 1.7 * cos(q2)
+            - 0.18 * uDetail * 1.4 * 2.15 * cos(q3) + 0.055 * uDetail * 6.2 * cos(q4),
+          0.30 * 1.35 * 1.7 * cos(q2) + 0.18 * uDetail * 0.55 * 2.15 * cos(q3)
+            + 0.055 * uDetail * 6.2 * cos(q4)
+        );
+        world.y = uLevel + uWaveAmplitude * wave;
+        float slopeScale = uWaveAmplitude / max(uModelHeight, 0.001);
+        vWaterNormal = normalize(vec3(-gradient.x * slopeScale, 1.0, -gradient.y * slopeScale));
+        vWorldPosition = world.xyz;
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }
+    `,
+    fragmentShader: `
+      uniform float uTime;
+      uniform float uModelHeight;
+      uniform float uDetail;
+      uniform float uOpacity;
+      uniform vec3 uColor;
+      uniform sampler2D uEnvironment;
+      uniform float uHasEnvironment;
+      uniform float uEnvironmentRotation;
+      varying vec3 vWorldPosition;
+      varying vec3 vWaterNormal;
+
+      vec2 environmentUv(vec3 direction) {
+        float c = cos(uEnvironmentRotation);
+        float s = sin(uEnvironmentRotation);
+        direction.xz = mat2(c, -s, s, c) * direction.xz;
+        return vec2(atan(direction.z, direction.x) / 6.28318530718 + 0.5,
+          asin(clamp(direction.y, -1.0, 1.0)) / 3.14159265359 + 0.5);
+      }
+
+      void main() {
+        vec3 normal = normalize(vWaterNormal);
+        if (!gl_FrontFacing) normal = -normal;
+        vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+        vec3 reflectedDirection = reflect(-viewDirection, normal);
+        vec3 proceduralSky = mix(vec3(0.08, 0.19, 0.23), vec3(0.62, 0.78, 0.82), max(reflectedDirection.y, 0.0));
+        vec3 reflected = texture2D(uEnvironment, environmentUv(reflectedDirection)).rgb;
+        reflected = mix(proceduralSky, reflected, uHasEnvironment);
+        float fresnel = pow(1.0 - max(dot(viewDirection, normal), 0.0), 4.0);
+        vec3 sunDirection = normalize(vec3(-0.35, 0.82, 0.45));
+        float sparkle = pow(max(dot(reflect(-sunDirection, normal), viewDirection), 0.0), mix(180.0, 38.0, min(uDetail / 3.0, 1.0)));
+        float ripple = 0.5 + 0.5 * sin((vWorldPosition.x + vWorldPosition.z) / max(uModelHeight, 0.001) * 36.0 + uTime * 2.4);
+        vec3 deepColor = uColor * mix(0.44, 0.74, ripple * min(uDetail, 1.5) / 1.5);
+        vec3 color = mix(deepColor, reflected, 0.24 + fresnel * 0.68) + sparkle * vec3(1.0, 0.94, 0.78) * 1.8;
+        gl_FragColor = vec4(color, uOpacity * (0.78 + fresnel * 0.22));
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }
+    `
+  });
+  waterMaterial.userData.outlineParameters = { visible: false };
+  const waterSurface = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 128, 128).rotateX(-Math.PI / 2), waterMaterial);
+  waterSurface.frustumCulled = false;
+  waterSurface.renderOrder = 40;
+  waterSurface.visible = false;
+  scene.add(waterSurface);
+
+  const underwaterFog = new THREE.FogExp2(0x176779, 0.004);
+  const underwaterOverlayMaterial = new THREE.ShaderMaterial({
+    uniforms: { uTime: waterUniforms.uTime, uColor: waterUniforms.uColor, uStrength: { value: 0 } },
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    vertexShader: `void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: `
+      uniform float uTime;
+      uniform vec3 uColor;
+      uniform float uStrength;
+      void main() {
+        float caustic = sin((gl_FragCoord.x + gl_FragCoord.y * 0.7) * 0.025 + uTime * 1.7) * 0.5 + 0.5;
+        gl_FragColor = vec4(mix(uColor * 0.52, vec3(0.18, 0.62, 0.68), caustic * 0.16), uStrength);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }
+    `
+  });
+  underwaterOverlayMaterial.userData.outlineParameters = { visible: false };
+  const underwaterOverlay = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), underwaterOverlayMaterial);
+  underwaterOverlay.frustumCulled = false;
+  underwaterOverlay.renderOrder = 10000;
+  underwaterOverlay.visible = false;
+  const underwaterScene = new THREE.Scene();
+  const underwaterCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  underwaterScene.add(underwaterOverlay);
 
   function resize() {
     const width = Math.max(1, viewport.clientWidth);
@@ -1478,6 +1626,8 @@ HTML = r'''<!doctype html>
     boneMarker.scale.setScalar(Math.max(0.5, modelHeight / 20));
     eyeBones = mesh.skeleton.bones.filter((bone) => /左目|右目|eye.?[LR]/i.test(bone.name || ''));
     $('model-size').textContent = `${size.x.toFixed(1)} × ${size.y.toFixed(1)} u`;
+    installWetnessEffect();
+    updateWaterSettings();
     createBoneControls();
     createMorphControls();
     resetCamera();
@@ -1816,6 +1966,191 @@ HTML = r'''<!doctype html>
     }
   }
 
+  const waterSample = { height: 0, gradientX: 0, gradientZ: 0, verticalVelocity: 0 };
+  function sampleWaterAt(x, z, target = waterSample) {
+    const heightScale = Math.max(modelHeight, 0.001);
+    const pX = x / heightScale;
+    const pZ = z / heightScale;
+    const detail = Number($('water-detail').value);
+    const amplitude = Number($('water-wave-strength').value) * modelHeight;
+    const q1 = pX * 1.3 + waterTime * 0.9;
+    const q2 = (pX * 0.65 + pZ * 1.35) * 1.7 - waterTime * 1.15;
+    const q3 = (-pX * 1.4 + pZ * 0.55) * 2.15 + waterTime * 0.65;
+    const q4 = (pX + pZ) * 6.2 + waterTime * 1.8;
+    const wave = 0.52 * Math.sin(q1) + 0.30 * Math.sin(q2)
+      + 0.18 * detail * Math.sin(q3) + 0.055 * detail * Math.sin(q4);
+    target.height = modelBaseY + Number($('water-height').value) * modelHeight + amplitude * wave;
+    target.gradientX = 0.52 * 1.3 * Math.cos(q1) + 0.30 * 0.65 * 1.7 * Math.cos(q2)
+      - 0.18 * detail * 1.4 * 2.15 * Math.cos(q3) + 0.055 * detail * 6.2 * Math.cos(q4);
+    target.gradientZ = 0.30 * 1.35 * 1.7 * Math.cos(q2)
+      + 0.18 * detail * 0.55 * 2.15 * Math.cos(q3) + 0.055 * detail * 6.2 * Math.cos(q4);
+    target.verticalVelocity = amplitude * (
+      0.52 * 0.9 * Math.cos(q1) - 0.30 * 1.15 * Math.cos(q2)
+      + 0.18 * detail * 0.65 * Math.cos(q3) + 0.055 * detail * 1.8 * Math.cos(q4)
+    );
+    return target;
+  }
+
+  function syncWaterEnvironment() {
+    waterUniforms.uEnvironment.value = scene.environment || waterFallbackTexture;
+    waterUniforms.uHasEnvironment.value = scene.environment ? 1 : 0;
+    waterUniforms.uEnvironmentRotation.value = THREE.MathUtils.degToRad(Number($('hdr-rotation').value));
+  }
+
+  function setUnderwaterState(enabled) {
+    if (cameraUnderwater === enabled) return;
+    cameraUnderwater = enabled;
+    underwaterOverlay.visible = enabled;
+    scene.fog = enabled ? underwaterFog : null;
+    root.traverse((object) => {
+      const materials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+      materials.forEach((material) => { material.needsUpdate = true; });
+    });
+    accessoryRoot.traverse((object) => {
+      const materials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : [];
+      materials.forEach((material) => { material.needsUpdate = true; });
+    });
+  }
+
+  function updateWaterSettings() {
+    const enabled = $('water-enabled').checked;
+    const levelRatio = Number($('water-height').value);
+    const waveRatio = Number($('water-wave-strength').value);
+    waterUniforms.uLevel.value = modelBaseY + levelRatio * modelHeight;
+    waterUniforms.uModelHeight.value = modelHeight;
+    waterUniforms.uWaveAmplitude.value = waveRatio * modelHeight;
+    waterUniforms.uDetail.value = Number($('water-detail').value);
+    waterUniforms.uOpacity.value = Number($('water-opacity').value);
+    waterUniforms.uColor.value.set($('water-color').value);
+    waterSurface.scale.set(modelHeight * 30, 1, modelHeight * 30);
+    waterSurface.visible = enabled;
+    underwaterFog.color.copy(waterUniforms.uColor.value).multiplyScalar(0.72);
+    for (const material of Array.isArray(mesh?.material) ? mesh.material : mesh?.material ? [mesh.material] : []) {
+      if (material.userData.wetShader) material.userData.wetShader.uniforms.wetDarkening.value = Number($('wet-darkening').value);
+    }
+    document.querySelector('[data-for="water-height"]').textContent = `${Math.round(levelRatio * 100)}%`;
+    document.querySelector('[data-for="water-wave-strength"]').textContent = `${(waveRatio * 100).toFixed(1)}%`;
+    document.querySelector('[data-for="water-detail"]').textContent = `${Number($('water-detail').value).toFixed(2)}×`;
+    document.querySelector('[data-for="water-opacity"]').textContent = `${Math.round(Number($('water-opacity').value) * 100)}%`;
+    document.querySelector('[data-for="water-buoyancy"]').textContent = `${Number($('water-buoyancy').value).toFixed(2)}×`;
+    document.querySelector('[data-for="water-drag"]').textContent = `${Number($('water-drag').value).toFixed(1)}×`;
+    document.querySelector('[data-for="wet-darkening"]').textContent = `${Math.round(Number($('wet-darkening').value) * 100)}%`;
+    document.querySelector('[data-for="dry-time"]').textContent = `${$('dry-time').value} 秒`;
+    $('water-status').textContent = enabled ? '海面开启' : wetnessRemaining ? '干燥中' : '默认关闭';
+    $('water-physics-status').textContent = enabled && physicsEnabled && currentMmdPhysics() ? `${waterSubmergedBodies} 个刚体浸没` : enabled ? '视觉模式' : '关闭';
+    if (!enabled) setUnderwaterState(false);
+  }
+
+  function installWetnessEffect() {
+    wetnessAttribute = null;
+    wetnessAccumulator = 0;
+    wetnessRemaining = false;
+    if (!mesh?.geometry?.attributes?.position || !mesh.isSkinnedMesh) return;
+    wetnessAttribute = new THREE.Float32BufferAttribute(mesh.geometry.attributes.position.count, 1);
+    wetnessAttribute.setUsage(THREE.DynamicDrawUsage);
+    mesh.geometry.setAttribute('wetness', wetnessAttribute);
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const material of materials) {
+      if (!material || material.userData.wetnessPatched) continue;
+      const originalCompile = material.onBeforeCompile.bind(material);
+      const originalCacheKey = material.customProgramCacheKey.bind(material);
+      material.onBeforeCompile = (shader, rendererRef) => {
+        originalCompile(shader, rendererRef);
+        shader.uniforms.wetDarkening = { value: Number($('wet-darkening').value) };
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nattribute float wetness;\nvarying float vWetness;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWetness = wetness;');
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying float vWetness;\nuniform float wetDarkening;')
+          .replace('#include <opaque_fragment>', 'outgoingLight = mix(outgoingLight, outgoingLight * vec3(0.54, 0.68, 0.72), clamp(vWetness * wetDarkening, 0.0, 0.78));\n#include <opaque_fragment>');
+        material.userData.wetShader = shader;
+      };
+      material.customProgramCacheKey = () => `${originalCacheKey()}|wetness-v1`;
+      material.userData.wetnessPatched = true;
+      material.needsUpdate = true;
+    }
+  }
+
+  const wetVertex = new THREE.Vector3();
+  function updateWetness(delta) {
+    if (!wetnessAttribute || !mesh || (!$('water-enabled').checked && !wetnessRemaining)) return;
+    wetnessAccumulator += delta;
+    if (wetnessAccumulator < 0.1) return;
+    const elapsed = wetnessAccumulator;
+    wetnessAccumulator = 0;
+    const enabled = $('water-enabled').checked;
+    const wetRate = Math.min(1, elapsed * 5.5);
+    const dryRate = elapsed / Math.max(1, Number($('dry-time').value));
+    const values = wetnessAttribute.array;
+    let remaining = false;
+    let wetCount = 0;
+    if (enabled) {
+      mesh.updateWorldMatrix(true, false);
+      mesh.skeleton.update();
+    }
+    for (let index = 0; index < values.length; index += 1) {
+      let submerged = false;
+      if (enabled) {
+        mesh.getVertexPosition(index, wetVertex).applyMatrix4(mesh.matrixWorld);
+        submerged = wetVertex.y <= sampleWaterAt(wetVertex.x, wetVertex.z).height;
+      }
+      values[index] = submerged ? Math.min(1, values[index] + wetRate) : Math.max(0, values[index] - dryRate);
+      if (values[index] > 0.001) remaining = true;
+      if (values[index] > 0.15) wetCount += 1;
+    }
+    wetnessRemaining = remaining;
+    wetnessAttribute.needsUpdate = true;
+    if (!enabled) $('water-status').textContent = remaining ? '干燥中' : '默认关闭';
+    else $('water-status').textContent = wetCount ? `浸湿 ${Math.round(wetCount / values.length * 100)}%` : '海面开启';
+  }
+
+  function applyWaterPhysics() {
+    waterSubmergedBodies = 0;
+    if (!physicsEnabled || !$('water-enabled').checked || !window.Ammo) return;
+    const physics = currentMmdPhysics();
+    if (!physics) return;
+    const buoyancy = Number($('water-buoyancy').value);
+    const drag = Number($('water-drag').value);
+    const waveRatio = Number($('water-wave-strength').value);
+    const depthScale = modelHeight * Math.max(0.025, 0.035 + waveRatio * 0.8);
+    for (const rigidBody of physics.bodies || []) {
+      if (!isWindBody(rigidBody)) continue;
+      const body = rigidBody.body;
+      const origin = body.getCenterOfMassTransform?.().getOrigin?.();
+      if (!origin) continue;
+      const sample = sampleWaterAt(origin.x(), origin.z());
+      const immersion = THREE.MathUtils.clamp((sample.height - origin.y()) / depthScale, 0, 1.5);
+      if (immersion <= 0) continue;
+      waterSubmergedBodies += 1;
+      const velocity = body.getLinearVelocity?.();
+      const velocityX = velocity?.x?.() || 0;
+      const velocityY = velocity?.y?.() || 0;
+      const velocityZ = velocity?.z?.() || 0;
+      const mass = Math.max(0.001, Number(rigidBody.params?.weight) || 1);
+      const dragScale = mass * drag * immersion;
+      const wavePush = mass * waveRatio * 55 * immersion;
+      const forceX = -velocityX * dragScale - sample.gradientX * wavePush;
+      const forceY = mass * 98 * buoyancy * immersion + (sample.verticalVelocity - velocityY) * dragScale * 0.75;
+      const forceZ = -velocityZ * dragScale - sample.gradientZ * wavePush;
+      if (!waterAmmoForce) waterAmmoForce = new window.Ammo.btVector3(forceX, forceY, forceZ);
+      else waterAmmoForce.setValue(forceX, forceY, forceZ);
+      body.activate?.(true);
+      body.applyCentralForce?.(waterAmmoForce);
+    }
+  }
+
+  function updateUnderwaterEffect() {
+    const enabled = $('water-enabled').checked;
+    if (!enabled) { setUnderwaterState(false); return; }
+    const sample = sampleWaterAt(camera.position.x, camera.position.z);
+    const depth = sample.height - camera.position.y;
+    setUnderwaterState(depth > 0);
+    if (!cameraUnderwater) return;
+    const depthRatio = THREE.MathUtils.clamp(depth / Math.max(modelHeight * 0.4, 0.001), 0, 1);
+    underwaterFog.density = (0.045 + depthRatio * 0.12) / Math.max(modelHeight, 0.1);
+    underwaterOverlayMaterial.uniforms.uStrength.value = 0.07 + depthRatio * 0.16;
+  }
+
   function aimWindFromCamera() {
     if (!mesh) return;
     const center = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
@@ -1828,14 +2163,14 @@ HTML = r'''<!doctype html>
   }
 
   async function setPhysicsEnabled(enabled) {
-    if (!mesh) { $('physics-enabled').checked = false; updateWindSettings(); return; }
+    if (!mesh) { $('physics-enabled').checked = false; updateWindSettings(); updateWaterSettings(); return; }
     if (enabled && !physicsInitialized) {
       $('physics-enabled').disabled = true; $('physics-status').textContent = '载入引擎…';
       try { await ensureAmmo(); } catch (error) {
-        console.error(error); $('physics-enabled').checked = false; $('physics-status').textContent = '载入失败'; $('physics-enabled').disabled = false; updateWindSettings(); return;
+        console.error(error); $('physics-enabled').checked = false; $('physics-status').textContent = '载入失败'; $('physics-enabled').disabled = false; updateWindSettings(); updateWaterSettings(); return;
       }
       $('physics-enabled').disabled = false;
-      if (!$('physics-enabled').checked) { updateWindSettings(); return; }
+      if (!$('physics-enabled').checked) { updateWindSettings(); updateWaterSettings(); return; }
     }
     const time = animationMixer?.time || 0;
     physicsEnabled = enabled;
@@ -1847,6 +2182,7 @@ HTML = r'''<!doctype html>
       $('physics-status').textContent = physicsInitialized ? '已停止' : '默认关闭'; $('reset-physics').disabled = true;
     }
     updateWindSettings();
+    updateWaterSettings();
   }
 
   function updatePhysicsSettings() {
@@ -1867,7 +2203,7 @@ HTML = r'''<!doctype html>
   async function setHdrEnvironment(enabled) {
     const requestId = ++hdrRequestId;
     if (!enabled) {
-      scene.environment = null; scene.background = new THREE.Color($('background').value); $('environment-status').textContent = '纯色背景'; return;
+      scene.environment = null; scene.background = new THREE.Color($('background').value); syncWaterEnvironment(); $('environment-status').textContent = '纯色背景'; return;
     }
     const preset = $('hdr-preset').value;
     const label = $('hdr-preset').selectedOptions[0]?.textContent || 'HDR 全景';
@@ -1888,11 +2224,12 @@ HTML = r'''<!doctype html>
         hdrTexturePreset = preset;
       }
       scene.environment = hdrTexture; scene.background = hdrTexture;
+      syncWaterEnvironment();
       updatePostProcessing();
       $('environment-status').textContent = label.split(' · ')[0];
     } catch (error) {
       if (requestId !== hdrRequestId) return;
-      console.error(error); $('hdr-environment').checked = false; scene.environment = null; scene.background = new THREE.Color($('background').value); $('environment-status').textContent = 'HDR 失败';
+      console.error(error); $('hdr-environment').checked = false; scene.environment = null; scene.background = new THREE.Color($('background').value); syncWaterEnvironment(); $('environment-status').textContent = 'HDR 失败';
     }
   }
 
@@ -1917,12 +2254,18 @@ HTML = r'''<!doctype html>
       const rotation = THREE.MathUtils.degToRad(Number($('hdr-rotation').value));
       scene.backgroundRotation.set(0, rotation, 0); scene.environmentRotation.set(0, rotation, 0);
     }
+    syncWaterEnvironment();
   }
 
   function renderScene() {
     if (bloomPass.enabled || bokehPass.enabled) composer.render();
     else if (outlineEnabled && !document.hidden) effect.render(scene, camera);
     else renderer.render(scene, camera);
+    if (underwaterOverlay.visible) {
+      renderer.autoClear = false;
+      renderer.render(underwaterScene, underwaterCamera);
+      renderer.autoClear = true;
+    }
   }
 
   function captureDimensions() {
@@ -2001,8 +2344,8 @@ HTML = r'''<!doctype html>
     deactivateIkHandle(true); for (const handle of ikHandles.values()) scene.remove(handle.target); ikHandles.clear();
     transformControls.detach(); if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper.material?.dispose?.(); skeletonHelper = null; }
     if (mesh) { root.remove(mesh); disposeRenderable(mesh); }
-    mesh = null; selectedPoseObject = null; restTransforms.clear(); animationBaseTransforms.clear(); poseOverrides.clear(); poseHistory.length = 0; poseFuture.length = 0;
-    root.position.set(0, 0, 0); root.quaternion.identity(); root.scale.setScalar(1); rebuildMotionSelect(); updateHistoryUi(); updateAnimationUi(); updateWindSettings();
+    mesh = null; wetnessAttribute = null; wetnessRemaining = false; wetnessAccumulator = 0; selectedPoseObject = null; restTransforms.clear(); animationBaseTransforms.clear(); poseOverrides.clear(); poseHistory.length = 0; poseFuture.length = 0;
+    setUnderwaterState(false); root.position.set(0, 0, 0); root.quaternion.identity(); root.scale.setScalar(1); rebuildMotionSelect(); updateHistoryUi(); updateAnimationUi(); updateWindSettings(); updateWaterSettings();
   }
 
   function populateModelSelect(selectedId) {
@@ -2259,6 +2602,8 @@ HTML = r'''<!doctype html>
   $('wind-enabled').addEventListener('input', updateWindSettings);
   ['wind-strength', 'wind-azimuth', 'wind-elevation', 'wind-reverse'].forEach((id) => $(id).addEventListener('input', updateWindSettings));
   $('wind-from-camera').addEventListener('click', aimWindFromCamera);
+  $('water-enabled').addEventListener('input', updateWaterSettings);
+  ['water-height', 'water-wave-strength', 'water-detail', 'water-opacity', 'water-color', 'water-buoyancy', 'water-drag', 'wet-darkening', 'dry-time'].forEach((id) => $(id).addEventListener('input', updateWaterSettings));
   ['physics-gravity', 'physics-quality'].forEach((id) => $(id).addEventListener('input', updatePhysicsSettings));
   $('reset-physics').addEventListener('click', resetPhysics);
   $('morph-search').addEventListener('input', () => {
@@ -2298,6 +2643,7 @@ HTML = r'''<!doctype html>
   updatePostProcessing();
   updatePhysicsSettings();
   updateWindSettings();
+  updateWaterSettings();
   window.lucide?.createIcons({ attrs: { 'stroke-width': 1.8 } });
   try { setInspectorCollapsed(localStorage.getItem('mikuMmdInspectorCollapsed') === 'true', false); }
   catch { setInspectorCollapsed(false, false); }
@@ -2328,6 +2674,8 @@ HTML = r'''<!doctype html>
   function animate(now) {
     requestAnimationFrame(animate);
     const delta = Math.min(clock.getDelta(), 0.1);
+    waterTime += delta;
+    waterUniforms.uTime.value = waterTime;
     const playbackSpeed = Number($('animation-speed').value);
     let playbackWrapped = false;
     if (animationPlaying) {
@@ -2336,6 +2684,7 @@ HTML = r'''<!doctype html>
       if ($('animation-loop').checked && duration > 0 && playbackClock >= duration) { playbackClock %= duration; playbackWrapped = true; }
     }
     applyDirectionalWind();
+    applyWaterPhysics();
     if (animationHelper) {
       if (animationMixer) animationMixer.timeScale = playbackSpeed;
       if (playbackWrapped && animationMixer) { settleMotionBlend(); animationMixer.setTime(playbackClock); animationHelper.update(0); }
@@ -2354,12 +2703,20 @@ HTML = r'''<!doctype html>
     }
     if (activeIk) solveActiveIk();
     updateEyeTracking(); updateAutomaticBlink(delta);
+    updateWetness(delta);
     if ($('auto-rotate').checked && mesh) root.rotation.y += delta * 0.35 * Number($('rotate-speed').value);
     if (audioElement && animationPlaying) syncAudioToTime(playbackTime(), true);
     if (animationPlaying && !$('animation-loop').checked && playbackTime() >= playbackDuration() - 0.001) {
       animationPlaying = false; setMotionActionsPaused(true); if (cameraAnimationAction) cameraAnimationAction.paused = true; audioElement?.pause();
     }
-    updateTurntableRecording(now); if (!cameraAnimationHelper || !$('camera-vmd-enabled').checked) controls.update(); updateSelectionVisual(); updateAnimationUi(); renderScene();
+    updateTurntableRecording(now); if (!cameraAnimationHelper || !$('camera-vmd-enabled').checked) controls.update();
+    updateUnderwaterEffect();
+    waterStatusElapsed += delta;
+    if (waterStatusElapsed >= 0.3) {
+      waterStatusElapsed = 0;
+      if ($('water-enabled').checked) $('water-physics-status').textContent = physicsEnabled && currentMmdPhysics() ? `${waterSubmergedBodies} 个刚体浸没` : '视觉模式';
+    }
+    updateSelectionVisual(); updateAnimationUi(); renderScene();
     fpsFrames += 1; fpsElapsed += delta;
     if (fpsElapsed >= 0.75) {
       $('fps').textContent = `${Math.round(fpsFrames / fpsElapsed)} FPS`;
