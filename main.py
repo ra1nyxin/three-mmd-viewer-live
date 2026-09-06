@@ -697,8 +697,6 @@ HTML = r'''<!doctype html>
       }
     `,
     fragmentShader: `
-      uniform float uTime;
-      uniform float uModelHeight;
       uniform float uDetail;
       uniform float uOpacity;
       uniform vec3 uColor;
@@ -727,9 +725,8 @@ HTML = r'''<!doctype html>
         float fresnel = pow(1.0 - max(dot(viewDirection, normal), 0.0), 4.0);
         vec3 sunDirection = normalize(vec3(-0.35, 0.82, 0.45));
         float sparkle = pow(max(dot(reflect(-sunDirection, normal), viewDirection), 0.0), mix(180.0, 38.0, min(uDetail / 3.0, 1.0)));
-        float ripple = 0.5 + 0.5 * sin((vWorldPosition.x + vWorldPosition.z) / max(uModelHeight, 0.001) * 36.0 + uTime * 2.4);
-        vec3 deepColor = uColor * mix(0.44, 0.74, ripple * min(uDetail, 1.5) / 1.5);
-        vec3 color = mix(deepColor, reflected, 0.24 + fresnel * 0.68) + sparkle * vec3(1.0, 0.94, 0.78) * 1.8;
+        vec3 deepColor = uColor * 0.60;
+        vec3 color = mix(deepColor, reflected, 0.24 + fresnel * 0.68) + sparkle * vec3(1.0, 0.94, 0.78) * 1.15;
         gl_FragColor = vec4(color, uOpacity * (0.78 + fresnel * 0.22));
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -745,18 +742,29 @@ HTML = r'''<!doctype html>
 
   const underwaterFog = new THREE.FogExp2(0x176779, 0.004);
   const underwaterOverlayMaterial = new THREE.ShaderMaterial({
-    uniforms: { uTime: waterUniforms.uTime, uColor: waterUniforms.uColor, uStrength: { value: 0 } },
+    uniforms: { uColor: waterUniforms.uColor, uStrength: { value: 0 } },
     transparent: true,
     depthTest: false,
     depthWrite: false,
-    vertexShader: `void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    vertexShader: `
+      varying vec2 vScreenUv;
+      void main() {
+        vScreenUv = uv;
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
     fragmentShader: `
-      uniform float uTime;
       uniform vec3 uColor;
       uniform float uStrength;
+      varying vec2 vScreenUv;
       void main() {
-        float caustic = sin((gl_FragCoord.x + gl_FragCoord.y * 0.7) * 0.025 + uTime * 1.7) * 0.5 + 0.5;
-        gl_FragColor = vec4(mix(uColor * 0.52, vec3(0.18, 0.62, 0.68), caustic * 0.16), uStrength);
+        float verticalDepth = smoothstep(0.0, 1.0, vScreenUv.y);
+        vec2 centered = (vScreenUv - 0.5) * vec2(1.0, 0.78);
+        float centerLight = 1.0 - smoothstep(0.18, 0.68, length(centered));
+        vec3 deepTint = mix(uColor * 0.48, uColor * 0.58, verticalDepth);
+        vec3 tint = mix(deepTint, vec3(0.12, 0.38, 0.42), 0.10 + centerLight * 0.04);
+        float alpha = uStrength * (0.90 + centerLight * 0.10);
+        gl_FragColor = vec4(tint, alpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }
