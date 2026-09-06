@@ -1,5 +1,7 @@
 <img width="1905" height="954" alt="ae75cfd814f1b5d39105f9c956ab9e26" src="https://github.com/user-attachments/assets/810d60ef-a2e0-4607-be8a-c92cfb0c5bfb" />
 <img width="1908" height="956" alt="a294110d89929780a01cb2593d213068" src="https://github.com/user-attachments/assets/1f3c42df-9be6-4c54-ae5a-ab6429a69a34" />
+<img width="1280" height="642" alt="e682b07c5ec1d1fb07deca70a0add06638a" src="https://github.com/user-attachments/assets/698d71ea-2ec7-4d7d-98e6-8ad024602f9d" />
+<img width="1024" height="513" alt="e9a66a806ac8460ea33803a16a06b09a" src="https://github.com/user-attachments/assets/d8dd1edf-a6ea-4167-864b-f7ff439c66b4" />
 
 `three-mmd-viewer-live` 一个以单个 Python 文件部署的 MMD 局域网页面查看器。它能够直接加载 PMX/PMD 模型及其贴图，在现代浏览器中完成模型浏览、灯光调整、骨骼姿势编辑、IK 控制、VMD 动作播放、表情控制、按需物理模拟、动态海面、HDR 与后期处理，以及高清截图和转台视频导出。
 
@@ -485,5 +487,3 @@ python3 main.py --host 127.0.0.1 --model-dir /data/test-model
 12. HDR 旋转、背景亮度、模糊、泛光和景深可以独立工作。
 13. 普通、透明和高分辨率截图正常。
 14. 桌面与移动尺寸下参数面板不遮挡主要操作。
-
-<img width="1904" height="956" alt="image" src="https://github.com/user-attachments/assets/52b6e8cb-959d-489b-b732-67494ddf995a" />
