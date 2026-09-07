@@ -63,7 +63,7 @@ HTML = r'''<!doctype html>
       --accent-strong: #73efd3;
       --amber: #e7b45d;
       --danger: #ef7d79;
-      --panel: 354px;
+      --panel: 400px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-synthesis: none;
     }
