@@ -162,11 +162,26 @@ HTML = r'''<!doctype html>
     #error-box { position: absolute; z-index: 5; left: 50%; top: 50%; width: min(520px, calc(100% - 36px)); transform: translate(-50%, -50%); padding: 18px; border: 1px solid rgba(131,50,48,.4); border-radius: 8px; background: rgba(46,22,22,.95); color: #ffdcd9; display: none; }
     #error-box strong { display: block; margin-bottom: 7px; font-size: 13px; }
     #error-box span { color: #e7b4b0; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
-    #loading { position: absolute; z-index: 3; left: 50%; top: 50%; width: min(320px, calc(100% - 48px)); transform: translate(-50%, -50%); text-align: center; color: #31403d; }
-    #loading-name { font-size: 13px; font-weight: 650; }
-    .progress-track { height: 3px; margin-top: 12px; overflow: hidden; background: rgba(28,44,41,.16); }
+    #loading { position: absolute; z-index: 3; left: 50%; top: 50%; width: min(476px, calc(100% - 36px)); transform: translate(-50%, -50%); padding: 16px; border: 1px solid rgba(43,65,60,.2); border-radius: 8px; background: rgba(244,249,247,.88); box-shadow: 0 14px 38px rgba(28,48,43,.14); color: #31403d; backdrop-filter: blur(12px); }
+    #loading-name { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #loading-detail { min-height: 17px; margin-top: 4px; color: #5c6d69; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .progress-track { height: 4px; margin-top: 12px; overflow: hidden; background: rgba(28,44,41,.16); }
     #progress { width: 2%; height: 100%; background: #208d75; transition: width .15s ease; }
-    #loading-percent { margin-top: 7px; color: #5c6d69; font-size: 11px; font-variant-numeric: tabular-nums; }
+    .loading-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 7px; color: #5c6d69; font-size: 11px; font-variant-numeric: tabular-nums; }
+    #loading-percent { color: #276b5c; font-weight: 700; }
+    #loading-elapsed { white-space: nowrap; }
+    .loading-resources { margin-top: 13px; border-top: 1px solid rgba(43,65,60,.16); padding-top: 10px; }
+    .loading-resources-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #52625e; font-size: 11px; }
+    #loading-resource-count { color: #276b5c; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    #loading-resource-list { max-height: min(176px, 26vh); margin-top: 7px; overflow: auto; overscroll-behavior: contain; scrollbar-color: rgba(54,80,74,.35) transparent; }
+    .loading-resource { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; column-gap: 7px; min-height: 25px; padding: 3px 1px; border-bottom: 1px solid rgba(43,65,60,.08); font-size: 11px; }
+    .loading-resource:last-child { border-bottom: 0; }
+    .loading-resource-state { width: 7px; height: 7px; border-radius: 50%; background: #9aa9a5; }
+    .loading-resource.loading .loading-resource-state { background: var(--amber); box-shadow: 0 0 0 3px rgba(231,180,93,.16); }
+    .loading-resource.complete .loading-resource-state { background: #2ea987; }
+    .loading-resource.failed .loading-resource-state { background: var(--danger); }
+    .loading-resource-name { min-width: 0; color: #344440; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .loading-resource-meta { color: #6a7975; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .mobile-open { display: none; }
     @media (max-width: 760px) {
       :root { --panel: min(100vw, 390px); }
@@ -203,8 +218,13 @@ HTML = r'''<!doctype html>
     <button id="mobile-open" class="icon-button mobile-open" title="打开参数面板" aria-label="打开参数面板"><i data-lucide="sliders-horizontal"></i></button>
     <div id="loading">
       <div id="loading-name">载入 MMD 模型</div>
+      <div id="loading-detail">正在获取模型配置</div>
       <div class="progress-track"><div id="progress"></div></div>
-      <div id="loading-percent">0%</div>
+      <div class="loading-summary"><span id="loading-percent">0%</span><span id="loading-elapsed">0.0 秒</span></div>
+      <div class="loading-resources">
+        <div class="loading-resources-head"><span>资源明细</span><span id="loading-resource-count">0 / 0</span></div>
+        <div id="loading-resource-list" aria-live="polite"></div>
+      </div>
     </div>
     <div id="error-box"><strong>模型载入失败</strong><span id="error-message"></span></div>
   </section>
@@ -795,8 +815,113 @@ HTML = r'''<!doctype html>
     $('load-dot').className = state;
   }
 
+  let loadingActivity = null;
+  let loadingHideTimer = null;
+  let modelLoadRequest = 0;
+
+  function formatLoadBytes(bytes) {
+    const safe = Math.max(0, Number(bytes) || 0);
+    if (safe < 1024) return `${safe} B`;
+    if (safe < 1048576) return `${(safe / 1024).toFixed(1)} KiB`;
+    return `${(safe / 1048576).toFixed(safe >= 10485760 ? 1 : 2)} MiB`;
+  }
+
+  function formatLoadDuration(milliseconds) {
+    return `${Math.max(0, milliseconds) / 1000 < 10 ? (Math.max(0, milliseconds) / 1000).toFixed(1) : (Math.max(0, milliseconds) / 1000).toFixed(0)} 秒`;
+  }
+
+  function loadResourceLabel(url) {
+    try {
+      const pathname = decodeURIComponent(new URL(url, window.location.href).pathname);
+      return pathname.startsWith('/model/') ? pathname.slice('/model/'.length) : pathname.replace(/^\//, '');
+    } catch {
+      return String(url).replace(/^.*\//, '');
+    }
+  }
+
+  function loadResourceKey(url) {
+    try {
+      const parsed = new URL(url, window.location.href); parsed.search = ''; parsed.hash = ''; return parsed.href;
+    } catch { return String(url); }
+  }
+
+  function renderLoadingActivity() {
+    const activity = loadingActivity;
+    if (!activity) return;
+    const now = performance.now();
+    const resources = [...activity.resources.values()];
+    const finished = resources.filter((resource) => resource.state === 'complete' || resource.state === 'failed').length;
+    $('loading-elapsed').textContent = `已用时 ${formatLoadDuration(now - activity.startedAt)}`;
+    $('loading-resource-count').textContent = `${finished} / ${resources.length} 已完成`;
+    for (const resource of resources) {
+      const elapsed = (resource.endedAt || now) - resource.startedAt;
+      let meta;
+      if (resource.state === 'failed') meta = `失败 · ${formatLoadDuration(elapsed)}`;
+      else if (resource.state === 'complete') {
+        const size = resource.total || resource.loaded;
+        const speed = size && elapsed > 80 ? ` · ${formatLoadBytes(size / (elapsed / 1000))}/秒` : '';
+        meta = `${size ? formatLoadBytes(size) : '完成'} · ${formatLoadDuration(elapsed)}${speed}`;
+      } else if (resource.total) {
+        meta = `${formatLoadBytes(resource.loaded)} / ${formatLoadBytes(resource.total)}`;
+      } else meta = `读取中 · ${formatLoadDuration(elapsed)}`;
+      resource.element.className = `loading-resource ${resource.state}`;
+      resource.meta.textContent = meta;
+    }
+  }
+
+  function beginLoadingActivity(name, detail) {
+    if (loadingActivity?.timer) clearInterval(loadingActivity.timer);
+    if (loadingHideTimer) { clearTimeout(loadingHideTimer); loadingHideTimer = null; }
+    loadingActivity = { startedAt: performance.now(), progress: 2, resources: new Map(), timer: null };
+    $('loading').style.display = 'block'; $('error-box').style.display = 'none';
+    $('loading-name').textContent = name; $('loading-detail').textContent = detail;
+    $('progress').style.width = '2%'; $('loading-percent').textContent = '准备中';
+    $('loading-resource-list').replaceChildren();
+    renderLoadingActivity();
+    loadingActivity.timer = window.setInterval(renderLoadingActivity, 120);
+  }
+
+  function endLoadingActivity() {
+    if (!loadingActivity) return;
+    if (loadingActivity.timer) clearInterval(loadingActivity.timer);
+    loadingActivity.timer = null;
+    renderLoadingActivity();
+  }
+
+  function setLoadingDetail(detail) {
+    if (loadingActivity) $('loading-detail').textContent = detail;
+  }
+
+  function setLoadingProgress(value, label) {
+    if (!loadingActivity) return;
+    loadingActivity.progress = Math.max(loadingActivity.progress, Math.min(100, value));
+    $('progress').style.width = `${loadingActivity.progress}%`;
+    $('loading-percent').textContent = label;
+  }
+
+  function markLoadResource(url, state = 'loading', updates = {}) {
+    if (!loadingActivity) return null;
+    const key = loadResourceKey(url);
+    let resource = loadingActivity.resources.get(key);
+    if (!resource) {
+      const element = document.createElement('div'); element.className = 'loading-resource loading';
+      const dot = document.createElement('span'); dot.className = 'loading-resource-state';
+      const name = document.createElement('span'); name.className = 'loading-resource-name'; name.textContent = loadResourceLabel(url); name.title = loadResourceLabel(url);
+      const meta = document.createElement('span'); meta.className = 'loading-resource-meta';
+      element.append(dot, name, meta); $('loading-resource-list').append(element);
+      resource = { url, state: 'loading', startedAt: performance.now(), endedAt: 0, loaded: 0, total: 0, element, meta };
+      loadingActivity.resources.set(key, resource);
+    }
+    if (resource.state !== 'failed' || state === 'failed') resource.state = state;
+    Object.assign(resource, updates);
+    if ((state === 'complete' || state === 'failed') && !resource.endedAt) resource.endedAt = performance.now();
+    renderLoadingActivity();
+    return resource;
+  }
+
   function showError(error) {
     console.error(error);
+    endLoadingActivity();
     $('loading').style.display = 'none';
     $('error-message').textContent = String(error?.message || error);
     $('error-box').style.display = 'block';
@@ -2364,24 +2489,96 @@ HTML = r'''<!doctype html>
 
   async function loadPrimaryModel(entry) {
     if (!entry) throw new Error('没有可载入的主模型');
-    $('switch-model').disabled = true; $('loading').style.display = 'block'; $('error-box').style.display = 'none'; $('progress').style.width = '2%';
-    $('loading-name').textContent = entry.name; setStatus('准备载入');
-    const loader = new MMDLoader();
+    const requestId = ++modelLoadRequest;
+    const isCurrentLoad = () => requestId === modelLoadRequest;
+    beginLoadingActivity(`载入 ${entry.name}`, '正在准备模型文件');
+    $('switch-model').disabled = true; setStatus('准备载入');
+    const manager = new THREE.LoadingManager();
+    const modelUrlKey = loadResourceKey(entry.url);
     try {
-      const loadedMesh = await new Promise((resolve, reject) => loader.load(
-        entry.url,
-        resolve,
-        (event) => {
-          const loaded = event.loaded || 0; const total = event.total || entry.bytes || 1; const percent = Math.min(99, Math.round(loaded / total * 100));
-          $('progress').style.width = `${Math.max(2, percent)}%`; $('loading-percent').textContent = `${percent}%`; setStatus(`载入 ${percent}%`);
-        }, reject
-      ));
+      const loadedMesh = await new Promise((resolve, reject) => {
+        let pendingMesh = null;
+        let resourcesFinished = false;
+        let settled = false;
+        const fail = (error) => {
+          if (settled) return;
+          settled = true; reject(error);
+        };
+        const finish = () => {
+          if (!settled && pendingMesh && resourcesFinished) { settled = true; resolve(pendingMesh); }
+        };
+        const originalItemStart = manager.itemStart.bind(manager);
+        manager.itemStart = (url) => {
+          if (isCurrentLoad()) {
+            markLoadResource(url, 'loading');
+            setLoadingDetail(`正在读取 ${loadResourceLabel(url)}`);
+          }
+          originalItemStart(url);
+        };
+        manager.onStart = (url) => {
+          if (!isCurrentLoad()) return;
+          markLoadResource(url, 'loading');
+          setLoadingDetail(`正在读取 ${loadResourceLabel(url)}`);
+        };
+        manager.onProgress = (url, itemsLoaded, itemsTotal) => {
+          if (!isCurrentLoad()) return;
+          markLoadResource(url, 'complete');
+          const failures = [...loadingActivity.resources.values()].filter((resource) => resource.state === 'failed').length;
+          const resourceText = failures ? `已读取 ${itemsLoaded} / ${itemsTotal} 个资源，${failures} 个未能加载` : `已读取 ${itemsLoaded} / ${itemsTotal} 个资源`;
+          setLoadingDetail(resourceText);
+          setLoadingProgress(72 + 22 * itemsLoaded / Math.max(1, itemsTotal), `资源 ${itemsLoaded} / ${itemsTotal}`);
+        };
+        manager.onError = (url) => {
+          if (!isCurrentLoad()) return;
+          markLoadResource(url, 'failed');
+          setLoadingDetail(`无法读取 ${loadResourceLabel(url)}`);
+        };
+        manager.onLoad = () => {
+          resourcesFinished = true;
+          if (!isCurrentLoad()) { finish(); return; }
+          const failures = [...loadingActivity.resources.values()].filter((resource) => resource.state === 'failed').length;
+          setLoadingDetail(failures ? `资源读取结束，${failures} 个文件未能加载` : '模型数据与材质资源已读取');
+          setLoadingProgress(94, failures ? '资源读取完成（存在缺失）' : '资源读取完成');
+          finish();
+        };
+        const loader = new MMDLoader(manager);
+        loader.load(entry.url, (candidate) => {
+          pendingMesh = candidate;
+          if (!isCurrentLoad()) { finish(); return; }
+          markLoadResource(entry.url, 'loading');
+          setLoadingDetail('正在解析模型数据并创建材质');
+          finish();
+        }, (event) => {
+          if (!isCurrentLoad()) return;
+          const loaded = event.loaded || 0;
+          const total = event.total || entry.bytes || 1;
+          const percent = Math.min(100, Math.round(loaded / total * 100));
+          markLoadResource(entry.url, 'loading', { loaded, total });
+          setLoadingDetail(`正在下载 ${loadResourceLabel(entry.url)} · ${formatLoadBytes(loaded)} / ${formatLoadBytes(total)}`);
+          setLoadingProgress(4 + percent * 0.68, `主模型 ${percent}%`);
+          setStatus(`载入 ${percent}%`);
+        }, (error) => {
+          if (isCurrentLoad()) markLoadResource(entry.url, 'failed');
+          fail(error);
+        });
+      });
+      if (!isCurrentLoad()) { disposeRenderable(loadedMesh); return; }
+      if (modelUrlKey && !loadingActivity.resources.has(modelUrlKey)) markLoadResource(entry.url, 'complete', { loaded: entry.bytes, total: entry.bytes });
+      setLoadingDetail('正在初始化骨骼、形变与场景');
+      setLoadingProgress(97, '正在初始化');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       if (mesh) clearPrimaryModel();
       prepareModel(loadedMesh);
       $('model-name').textContent = entry.name; $('model-meta').textContent = `PMX · ${(entry.bytes / 1048576).toFixed(1)} MB`;
-      $('progress').style.width = '100%'; $('loading-percent').textContent = '100%'; setTimeout(() => { $('loading').style.display = 'none'; }, 250);
+      setLoadingDetail(`${entry.name} 已就绪`); setLoadingProgress(100, '加载完成');
+      loadingHideTimer = setTimeout(() => {
+        if (isCurrentLoad()) { $('loading').style.display = 'none'; endLoadingActivity(); }
+        loadingHideTimer = null;
+      }, 500);
       setStatus('模型就绪', 'ready'); $('model-library-status').textContent = entry.name; $('model-select').value = entry.id;
-    } finally { $('switch-model').disabled = false; }
+    } catch (error) {
+      if (isCurrentLoad()) throw error;
+    } finally { if (isCurrentLoad()) $('switch-model').disabled = false; }
   }
 
   function rebuildAccessorySelect(preferredKey = selectedAccessoryKey) {
@@ -2452,6 +2649,8 @@ HTML = r'''<!doctype html>
   }
 
   async function loadModel() {
+    beginLoadingActivity('载入 MMD 模型', '正在获取模型配置');
+    setStatus('读取模型配置');
     const configResponse = await fetch('/api/config');
     if (!configResponse.ok) throw new Error(`配置请求失败：HTTP ${configResponse.status}`);
     const config = await configResponse.json();
